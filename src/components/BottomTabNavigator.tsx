@@ -40,8 +40,8 @@ const HomeStack = () => (
 
 const DashboardStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#FFFBE6' } }}>
-    <Stack.Screen name="Communication" component={Communication} />
     <Stack.Screen name="EcoStarter" component={EcoStarter} />
+    <Stack.Screen name="Communication" component={Communication} />
     <Stack.Screen name="History" component={History} />
     <Stack.Screen name="Challenge" component={Challenge} />
     <Stack.Screen name="StartChallenge" component={StartChallenge} />

@@ -1,228 +1,258 @@
-import rect, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert, Share } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Share2, Bookmark, Heart, ThumbsDown, ArrowRight } from "lucide-react-native";
 import BlogContent from "../components/BlogContent";
-function TopArticle() {
-    const Dp = require("../assets/Hari.png");
-    const Recycling = require("../assets/Recycling.png");
+import { articlesAPI } from "../api/articles";
+import { getUploadUrl } from "../api/config";
+import { useAuth } from "../context/AuthContext";
+
+interface ArticleData {
+    _id: string;
+    title: string;
+    category: string;
+    author: {
+        _id: string;
+        name: string;
+        avatar: string;
+    };
+    images: string[];
+    content: string;
+    hashtags: string[];
+    likes: string[];
+    dislikes: string[];
+    bookmarks: string[];
+    shares: number;
+    createdAt: string;
+}
+
+function TopArticle({ navigation, route }: any) {
+    const { articleId } = route.params || {};
+    const { user } = useAuth();
+    const [article, setArticle] = useState<ArticleData | null>(null);
+    const [related, setRelated] = useState<ArticleData[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchData = useCallback(async () => {
+        try {
+            setLoading(true);
+            let targetId = articleId;
+
+            if (!targetId) {
+                // If no ID, get the top one
+                const topRes = await articlesAPI.getTop();
+                if (topRes.data.articles.length > 0) {
+                    targetId = topRes.data.articles[0]._id;
+                }
+            }
+
+            if (targetId) {
+                const [articleRes, relatedRes] = await Promise.all([
+                    articlesAPI.getById(targetId),
+                    articlesAPI.getAll(1, 4) // Simplified related for now
+                ]);
+                setArticle(articleRes.data.article);
+                setRelated(relatedRes.data.articles.filter((a: any) => a._id !== targetId).slice(0, 3));
+            }
+        } catch (err) {
+            console.error("Error fetching article details:", err);
+            Alert.alert("Error", "Failed to load article details");
+        } finally {
+            setLoading(false);
+        }
+    }, [articleId]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    const handleShare = async () => {
+        if (!article) return;
+        try {
+            await Share.share({
+                message: `${article.title}\n\nRead more on EcoSpace!`,
+            });
+            await articlesAPI.share(article._id);
+        } catch (error) {
+            console.error("Error sharing article:", error);
+        }
+    };
+
+    const handleLike = async () => {
+        if (!article) return;
+        try {
+            const res = await articlesAPI.like(article._id);
+            setArticle({ ...article, likes: res.data.likes, dislikes: res.data.dislikes });
+        } catch (err) {
+            console.error("Like error:", err);
+        }
+    };
+
+    const handleDislike = async () => {
+        if (!article) return;
+        try {
+            const res = await articlesAPI.dislike(article._id);
+            setArticle({ ...article, likes: res.data.likes, dislikes: res.data.dislikes });
+        } catch (err) {
+            console.error("Dislike error:", err);
+        }
+    };
+
+    const handleBookmark = async () => {
+        if (!article) return;
+        try {
+            const res = await articlesAPI.bookmark(article._id);
+            setArticle({ ...article, bookmarks: res.data.bookmarks });
+        } catch (err) {
+            console.error("Bookmark error:", err);
+        }
+    };
+
+    const getTimeAgo = (date: string) => {
+        const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+        const days = Math.floor(seconds / (24 * 3600));
+        if (days === 0) return "Today";
+        return `${days}d ago`;
+    };
+
+    if (loading) {
+        return (
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: '#FFFBE6' }}>
+                <ActivityIndicator size="large" color="#4F9A42" />
+            </View>
+        );
+    }
+
+    if (!article) {
+        return (
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                <Text>Article not found</Text>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 20 }}>
+                    <Text style={{ color: '#5584EE' }}>Go Back</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    const isLiked = article.likes.includes(user?._id || "");
+    const isDisliked = article.dislikes.includes(user?._id || "");
+    const isBookmarked = article.bookmarks.includes(user?._id || "");
+
     return (
         <SafeAreaView style={{ flex: 1, marginTop: 10, }} edges={['top', 'left', 'right']}>
             <View style={{ flexDirection: "column", marginHorizontal: 30 }}>
-                <View style={{}}>
+                <View>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                        <TouchableOpacity>
+                        <TouchableOpacity onPress={() => navigation.goBack()}>
                             <ChevronLeft width={30} height={30} />
                         </TouchableOpacity>
                         <View style={{ flexDirection: "row" }}>
-                            <TouchableOpacity style={{ marginRight: 30 }}>
-                                <Share2 width={30} height={30} />
+                            <TouchableOpacity style={{ marginRight: 30 }} onPress={handleShare}>
+                                <Share2 width={30} height={30} color="#444" />
                             </TouchableOpacity>
-                            <TouchableOpacity>
-                                <Bookmark width={30} height={30} />
+                            <TouchableOpacity onPress={handleBookmark}>
+                                <Bookmark width={30} height={30} color={isBookmarked ? "#2E7D32" : "#444"} fill={isBookmarked ? "#2E7D32" : "none"} />
                             </TouchableOpacity>
                         </View>
                     </View>
                 </View>
                 <View style={{ marginTop: 8, alignItems: "center" }}>
-                    <View style={{ height: 150, width: 200, borderRadius: 30, alignItems: "center", justifyContent: "center", }}>
-                        <View style={{ width: 100, height: 100 }}>
-                            <Image source={Dp} resizeMode="contain" style={{ width: "100%", height: "100%", borderRadius: 90 }} />
+                    <View style={{ height: 150, width: 220, borderRadius: 30, alignItems: "center", justifyContent: "center", }}>
+                        <View style={{ width: 80, height: 80 }}>
+                            <Image source={{ uri: getUploadUrl(article.author.avatar) }} resizeMode="cover" style={{ width: "100%", height: "100%", borderRadius: 40, borderWidth: 3, borderColor: '#4F9A42' }} />
                         </View>
                         <View style={{ marginTop: 10 }}>
-                            <Text style={{ fontWeight: 600, fontSize: 20, letterSpacing: 1 }}>Hari</Text>
+                            <Text style={{ fontWeight: "600", fontSize: 20, letterSpacing: 1 }}>{article.author.name}</Text>
                         </View>
                     </View>
-                    <View style={{}}>
+                    <View>
                         <TouchableOpacity style={{
                             marginHorizontal: 20,
-                            height: 40,
+                            height: 36,
                             justifyContent: "center",
                             alignItems: "center",
                             borderRadius: 50,
                             backgroundColor: "#5584EE",
-                            width: 120,
+                            width: 100,
                             marginBottom: 15
                         }}>
-                            <Text style={{
-                                color: "white",
-                                fontWeight: "500",
-                                letterSpacing: 2,
-                                fontSize: 18,
-                            }}>
-                                Follow
-                            </Text>
+                            <Text style={{ color: "white", fontWeight: "600", fontSize: 14 }}>Follow</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </View>
-            <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }} style={{}}>
-                <View style={{ backgroundColor: "white", flex: 4, borderTopRightRadius: 60, borderTopLeftRadius: 60, borderBottomRightRadius: 30, borderBottomLeftRadius: 30 }}>
+            <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}>
+                <View style={{ backgroundColor: "white", flex: 4, borderTopRightRadius: 60, borderTopLeftRadius: 60, borderBottomRightRadius: 30, borderBottomLeftRadius: 30, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 }}>
                     <View style={{
                         backgroundColor: "#D9D9D9",
                         width: 60,
                         height: 5,
-                        marginTop: 10,
+                        marginTop: 15,
                         borderRadius: 5,
-                        justifyContent: "center",
-                        alignItems: "center",
                         alignSelf: "center",
                     }} />
                     <View style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", marginTop: 20, }}>
-                        <View style={{ flexDirection: "row", borderRadius: 30, alignItems: "center", padding: 7, paddingHorizontal: 9, backgroundColor: "#F2F2F2", }}>
-                            <View style={{ height: 38, width: 38, borderRadius: 30, marginRight: 20, }}>
-                                <Image source={Dp} resizeMode="contain" style={{ width: "100%", height: "100%", borderRadius: 90 }} />
-                            </View>
-                            <View style={{}}>
-                                <Text style={{ fontWeight: 600, fontSize: 16, color: "#4F4F4F" }}>Recycling</Text>
-                            </View>
+                        <View style={{ flexDirection: "row", borderRadius: 30, alignItems: "center", padding: 8, paddingHorizontal: 15, backgroundColor: "#F2F2F2", }}>
+                            <Text style={{ fontWeight: "700", fontSize: 14, color: "#4F9A42", textTransform: 'uppercase' }}>{article.category}</Text>
                         </View>
-                        <View style={{ marginTop: 15, marginHorizontal: 20, alignItems: "center", justifyContent: "center", }}>
-                            <Text style={{ fontWeight: 600, fontSize: 28, letterSpacing: 1, color: "#4F9A42", textAlign: "center" }}>8 Steps to help you Recycling things at home</Text>
+                        <View style={{ marginTop: 15, marginHorizontal: 25, alignItems: "center", justifyContent: "center", }}>
+                            <Text style={{ fontWeight: "700", fontSize: 26, color: "#222", textAlign: "center", lineHeight: 32 }}>{article.title}</Text>
                             <View style={{ flexDirection: "row", marginTop: 12, alignItems: "center" }}>
-                                <Text style={{ marginRight: 20, color: "#8B8B8B" }}>Trending No. 1</Text>
-                                <Text style={{ color: "#8B8B8B" }}>2 days ago</Text>
+                                <Text style={{ marginRight: 20, color: "#8B8B8B", fontWeight: '500' }}>Trending</Text>
+                                <Text style={{ color: "#8B8B8B" }}>{getTimeAgo(article.createdAt)}</Text>
                             </View>
                         </View>
                     </View>
-                    <BlogContent text="Whilst recycled materials are valuable commodities in the worldwide market and are financially important; recycling is good for the environment too. It makes best use of our limited natural resources.  Recycling is a real success story and we should be proud of what we have achieved as a nation – but there is still much more we can do." image={Dp} />
+                    <BlogContent text={article.content} image={{ uri: getUploadUrl(article.images[0]) }} />
                 </View>
-                <View style={{ flexDirection: "row", marginTop: 10, marginHorizontal: 30 }}>
-                    <TouchableOpacity style={{ marginRight: 15, padding: 12, borderRadius: 90, backgroundColor: "#5584EE" }}>
-                        <Heart width={30} height={30} color={"#FFFFFF"} />
+                <View style={{ flexDirection: "row", marginTop: 15, marginHorizontal: 30 }}>
+                    <TouchableOpacity onPress={handleLike} style={{ marginRight: 15, padding: 12, borderRadius: 90, backgroundColor: isLiked ? "#E91E63" : "#5584EE" }}>
+                        <Heart width={24} height={24} color={"#FFFFFF"} fill={isLiked ? "#FFFFFF" : "none"} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={{ padding: 12, borderRadius: 90, backgroundColor: "#5584EE", }}>
-                        <ThumbsDown width={30} height={30} color={"#FFFFFF"} />
+                    <TouchableOpacity onPress={handleDislike} style={{ padding: 12, borderRadius: 90, backgroundColor: isDisliked ? "#FB8C00" : "#5584EE", }}>
+                        <ThumbsDown width={24} height={24} color={"#FFFFFF"} fill={isDisliked ? "#FFFFFF" : "none"} />
                     </TouchableOpacity>
                 </View>
-                <View style={{ marginTop: 10, marginHorizontal: 30, flexDirection: "row", flexWrap: "wrap" }}>
-                    <View style={{ borderWidth: 2, paddingVertical: 10, paddingHorizontal: 13, margin: 10, borderRadius: 12, borderColor: "#AD9A5C", backgroundColor: "#FFF8D6" }}>
-                        <Text>Eco Cycle</Text>
-                    </View>
-                    <View style={{ borderWidth: 2, paddingVertical: 10, paddingHorizontal: 13, margin: 10, borderRadius: 12, borderColor: "#AD9A5C", backgroundColor: "#FFF8D6" }}>
-                        <Text>Metal Waste</Text>
-                    </View>
-                    <View style={{ borderWidth: 2, paddingVertical: 10, paddingHorizontal: 13, margin: 10, borderRadius: 12, borderColor: "#AD9A5C", backgroundColor: "#FFF8D6" }}>
-                        <Text>Up Cycle</Text>
-                    </View>
-                    <View style={{ borderWidth: 2, paddingVertical: 10, paddingHorizontal: 13, margin: 10, borderRadius: 12, borderColor: "#AD9A5C", backgroundColor: "#FFF8D6" }}>
-                        <Text>Green Guard</Text>
-                    </View>
-                    <View style={{ borderWidth: 2, margin: 10, paddingVertical: 10, paddingHorizontal: 13, borderRadius: 12, borderColor: "#AD9A5C", backgroundColor: "#FFF8D6" }}>
-                        <Text>Paper</Text>
-                    </View>
-                    <View style={{ borderWidth: 2, margin: 10, paddingVertical: 10, paddingHorizontal: 13, borderRadius: 12, borderColor: "#AD9A5C", backgroundColor: "#FFF8D6" }}>
-                        <Text>Zero Waste</Text>
-                    </View>
-                </View>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 10, marginHorizontal: 30 }}>
-                    <Text style={{ color: "#4F9A42", fontWeight: 600, fontSize: 20, letterSpacing: 2 }}>You might also enjoy!</Text>
-                </View>
-                <View style={{ marginHorizontal: 30 }}>
-                    <View style={{
-                        borderBottomWidth: 2,
-                        borderColor: "#939393",
-                        width: 330,
-                        height: 120,
-                        justifyContent: "center",
-                        padding: 2,
-                    }}>
-                        <View style={{ flexDirection: "row", alignItems: "center" }}>
-                            <View style={{ width: 80, height: 80 }}>
-                                <Image
-                                    source={Dp}
-                                    resizeMode="cover"
-                                    style={{ width: "100%", height: "100%", borderRadius: 10 }}
-                                />
-                            </View>
-                            <View style={{
-                                marginLeft: 10,
-                                flex: 1,
-                                flexShrink: 1
-                            }}>
-                                <Text style={{ fontWeight: "600", fontSize: 16 }}>
-                                    Gardening
-                                </Text>
-                                <Text
-                                    numberOfLines={2}
-                                    ellipsizeMode="tail"
-                                    style={{ color: "#555" }}
-                                >
-                                    Follows natural growing cycles and relies exclusively on biological processes.
-                                </Text>
-                            </View>
+                <View style={{ marginTop: 15, marginHorizontal: 30, flexDirection: "row", flexWrap: "wrap" }}>
+                    {article.hashtags.map((tag, idx) => (
+                        <View key={idx} style={{ borderWidth: 1, paddingVertical: 8, paddingHorizontal: 15, marginRight: 10, marginBottom: 10, borderRadius: 20, borderColor: "#BDAE7D", backgroundColor: "#FFF8D6" }}>
+                            <Text style={{ fontSize: 12, color: '#444', fontWeight: '500' }}>#{tag}</Text>
                         </View>
-                    </View>
-                    <View style={{
-                        borderBottomWidth: 2,
-                        borderColor: "#939393",
-                        width: 330,
-                        height: 120,
-                        justifyContent: "center",
-                        padding: 2,
-                    }}>
-                        <View style={{ flexDirection: "row", alignItems: "center" }}>
-                            <View style={{ width: 80, height: 80 }}>
-                                <Image
-                                    source={Dp}
-                                    resizeMode="cover"
-                                    style={{ width: "100%", height: "100%", borderRadius: 10 }}
-                                />
-                            </View>
-                            <View style={{
-                                marginLeft: 10,
-                                flex: 1,
-                                flexShrink: 1
-                            }}>
-                                <Text style={{ fontWeight: "600", fontSize: 16 }}>
-                                    Gardening
-                                </Text>
-                                <Text
-                                    numberOfLines={2}
-                                    ellipsizeMode="tail"
-                                    style={{ color: "#555" }}
-                                >
-                                    Follows natural growing cycles and relies exclusively on biological processes.
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
-                    <View style={{
-                        borderBottomWidth: 2,
-                        borderColor: "#939393",
-                        width: 330,
-                        height: 120,
-                        justifyContent: "center",
-                        padding: 2,
-                        marginBottom:20
-                    }}>
-                        <View style={{ flexDirection: "row", alignItems: "center" }}>
-                            <View style={{ width: 80, height: 80 }}>
-                                <Image
-                                    source={Dp}
-                                    resizeMode="cover"
-                                    style={{ width: "100%", height: "100%", borderRadius: 10 }}
-                                />
-                            </View>
-                            <View style={{
-                                marginLeft: 10,
-                                flex: 1,
-                                flexShrink: 1
-                            }}>
-                                <Text style={{ fontWeight: "600", fontSize: 16 }}>
-                                    Gardening
-                                </Text>
-                                <Text
-                                    numberOfLines={2}
-                                    ellipsizeMode="tail"
-                                    style={{ color: "#555" }}
-                                >
-                                    Follows natural growing cycles and relies exclusively on biological processes.
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
+                    ))}
                 </View>
+
+                {related.length > 0 && (
+                    <>
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 20, marginHorizontal: 30 }}>
+                            <Text style={{ color: "#4F9A42", fontWeight: "600", fontSize: 20, letterSpacing: 1 }}>You might also enjoy!</Text>
+                        </View>
+                        <View style={{ marginHorizontal: 30, marginTop: 10 }}>
+                            {related.map((item) => (
+                                <TouchableOpacity
+                                    key={item._id}
+                                    onPress={() => navigation.push('TopArticle', { articleId: item._id })}
+                                    style={{
+                                        borderBottomWidth: 1,
+                                        borderColor: "#E0E0E0",
+                                        paddingVertical: 12,
+                                        flexDirection: "row",
+                                        alignItems: "center"
+                                    }}
+                                >
+                                    <Image
+                                        source={{ uri: getUploadUrl(item.images[0]) }}
+                                        style={{ width: 70, height: 70, borderRadius: 10 }}
+                                        resizeMode="cover"
+                                    />
+                                    <View style={{ marginLeft: 15, flex: 1 }}>
+                                        <Text style={{ fontWeight: "600", fontSize: 14, color: '#222' }}>{item.category}</Text>
+                                        <Text numberOfLines={2} style={{ color: "#555", fontSize: 13, marginTop: 2 }}>{item.title}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </>
+                )}
             </ScrollView>
         </SafeAreaView>
     );

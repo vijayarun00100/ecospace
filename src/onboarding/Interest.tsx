@@ -1,7 +1,8 @@
-import React , {useState} from "react";
-import {View , Image , TouchableOpacity , Text} from "react-native";
-import {SafeAreaView} from "react-native-safe-area-context"
-
+import React, { useState } from "react";
+import { View, Image, TouchableOpacity, Text, Alert, ActivityIndicator } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context"
+import { authAPI } from "../api/auth";
+import { useAuth } from "../context/AuthContext";
 
 import Upcycling from "../assets/Upcycling.svg";
 import Gardining from "../assets/Gardining.svg";
@@ -15,99 +16,125 @@ import RecycledPaper from "../assets/RecycledPaper.svg";
 import Biodegradable from "../assets/Biodegradable.svg";
 import Bamboo from "../assets/Bamboo.svg";
 
-function Interest({navigation} : any){
+function Interest({ navigation, route }: any) {
+    const { name, gender } = route.params || {};
+    const { updateUser } = useAuth();
+    const [loading, setLoading] = useState(false);
 
-    const list = ["Upcycling" , "Gardining" , "Composing" , "Natural Soaps" , "Solar" , "Organic" , "Tree" , "Energy" , "Recycled Paper" , "Biodegradable" , "Bamboo"];
+    const list = ["Upcycling", "Gardining", "Composing", "Natural Soaps", "Solar", "Organic", "Tree", "Energy", "Recycled Paper", "Biodegradable", "Bamboo"];
 
-    const icons:any = {
-        "Upcycling":Upcycling,
-        "Gardining":Gardining,
-        "Composing":Composing,
-        "Natural Soaps":NaturalSoaps,
-        "Solar":Solar,
-        "Organic":Organic,
-        "Tree":Tree,
-        "Energy":Energy,
-        "Recycled Paper":RecycledPaper,
-        "Biodegradable":Biodegradable,
-        "Bamboo":Bamboo
+    const icons: any = {
+        "Upcycling": Upcycling,
+        "Gardining": Gardining,
+        "Composing": Composing,
+        "Natural Soaps": NaturalSoaps,
+        "Solar": Solar,
+        "Organic": Organic,
+        "Tree": Tree,
+        "Energy": Energy,
+        "Recycled Paper": RecycledPaper,
+        "Biodegradable": Biodegradable,
+        "Bamboo": Bamboo
     };
 
-    const [selected , setSelected] = useState<string[]>([]);
+    const [selected, setSelected] = useState<string[]>([]);
 
-    const toggleInterest = (item:string) => {
-        if(selected.includes(item)){
+    const toggleInterest = (item: string) => {
+        if (selected.includes(item)) {
             setSelected(selected.filter(i => i !== item));
-        }else{
-            setSelected([...selected , item]);
+        } else {
+            setSelected([...selected, item]);
         }
     };
 
-    return(
-        <SafeAreaView style={{flex:1 , justifyContent:"space-between" , paddingHorizontal:20}}>
+    const handleContinue = async () => {
+        if (selected.length < 2) {
+            Alert.alert("Error", "Please select at least two interests to proceed.");
+            return;
+        }
 
-            <View style = {{
-                paddingBottom:40
+        try {
+            setLoading(true);
+            const res = await authAPI.saveDetails({
+                name,
+                interests: selected,
+                // We can add gender to user model if we want, for now let's just save name and interests
+                // bio covers common text info
+            });
+            
+            updateUser(res.data.user);
+            navigation.navigate('Welcome');
+        } catch (err: any) {
+            Alert.alert("Error", err.response?.data?.error || "Failed to save details");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <SafeAreaView style={{ flex: 1, justifyContent: "space-between", paddingHorizontal: 20 }}>
+
+            <View style={{
+                paddingBottom: 40
             }}>
 
-                <View style={{marginTop:50}}>
-                    <Text style={{color:"#4F9A42" , fontWeight:"600" , fontSize:40}}>
+                <View style={{ marginTop: 50 }}>
+                    <Text style={{ color: "#4F9A42", fontWeight: "600", fontSize: 40 }}>
                         Let’s select {"\n"}your Interests.
                     </Text>
 
-                    <Text style={{color:"#313131" , fontWeight:"500" , fontSize:19 , marginTop:20}}>
+                    <Text style={{ color: "#313131", fontWeight: "500", fontSize: 19, marginTop: 20 }}>
                         Please select two or more to proceed.
                     </Text>
                 </View>
 
                 <View style={{
-                    flexWrap:"wrap",
-                    marginTop:30,
-                    flexDirection:"row",
-                    borderColor:"#141414",
-                    borderTopWidth:2,
-                    paddingTop:20
+                    flexWrap: "wrap",
+                    marginTop: 30,
+                    flexDirection: "row",
+                    borderColor: "#141414",
+                    borderTopWidth: 2,
+                    paddingTop: 20
                 }}>
 
-                    {list.map((item , index) => {
+                    {list.map((item, index) => {
 
                         const Icon = icons[item];
                         const isSelected = selected.includes(item);
 
-                        return(
-                            <View>
+                        return (
+                            <View key={index}>
                                 <TouchableOpacity
-                                    key={index}
                                     onPress={() => toggleInterest(item)}
                                     style={{
-                                        borderWidth:2,
+                                        borderWidth: 2,
                                         borderColor: isSelected ? "#4F9A42" : "#BDAE7D",
                                         backgroundColor: isSelected ? "#4F9A42" : "#FFF8D6",
-                                        marginTop:10,
-                                        paddingHorizontal : 10,
-                                        paddingVertical : 7,
-                                        borderRadius:50,
-                                        marginLeft:20,
-                                        flexDirection:"row",
-                                        justifyContent:"center",
-                                        alignItems:"center",
+                                        marginTop: 10,
+                                        paddingHorizontal: 10,
+                                        paddingVertical: 7,
+                                        borderRadius: 50,
+                                        marginLeft: 20,
+                                        flexDirection: "row",
+                                        justifyContent: "center",
+                                        alignItems: "center",
 
                                     }}
                                 >
 
                                     <View style={{
-                                        width:30 ,
-                                        height:30,
-                                        marginRight:10,
-                                        borderRadius:100 ,
+                                        width: 30,
+                                        height: 30,
+                                        marginRight: 10,
+                                        borderRadius: 100,
                                         backgroundColor: "#FFF4BA",
-                                        justifyContent:"center",
-                                        alignItems:"center"
+                                        justifyContent: "center",
+                                        alignItems: "center"
                                     }}>
-                                        <Icon width={18} height={18}/>
+                                        <Icon width={18} height={18} />
                                     </View>
 
-                                    <Text style={{color:isSelected ? "white" : "#141414"}}>
+                                    <Text style={{ color: isSelected ? "white" : "#141414" }}>
                                         {item}
                                     </Text>
 
@@ -122,27 +149,31 @@ function Interest({navigation} : any){
 
             <View>
                 <TouchableOpacity
-                    disabled={selected.length < 2}
+                    disabled={selected.length < 2 || loading}
                     style={{
-                        marginHorizontal:20,
-                        height:60,
-                        justifyContent:"center",
-                        alignItems:"center",
-                        borderRadius:50,
-                        backgroundColor:"#5584EE",
-                        marginBottom:20,
+                        marginHorizontal: 20,
+                        height: 60,
+                        justifyContent: "center",
+                        alignItems: "center",
+                        borderRadius: 50,
+                        backgroundColor: "#5584EE",
+                        marginBottom: 20,
                         opacity: selected.length >= 2 ? 1 : 0.4
                     }}
-                    onPress={() => navigation.navigate('Welcome')}
+                    onPress={handleContinue}
                 >
-                    <Text style={{
-                        color:"white",
-                        fontWeight:"500",
-                        letterSpacing:2,
-                        fontSize:18,
-                    }}>
-                        Continue
-                    </Text>
+                    {loading ? (
+                        <ActivityIndicator color="white" />
+                    ) : (
+                        <Text style={{
+                            color: "white",
+                            fontWeight: "500",
+                            letterSpacing: 2,
+                            fontSize: 18,
+                        }}>
+                            Continue
+                        </Text>
+                    )}
                 </TouchableOpacity>
             </View>
 

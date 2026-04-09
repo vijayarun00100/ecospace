@@ -11,8 +11,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { X, ChevronLeft  , ChevronRight , MapPin , UserRound , Settings, Eye} from "lucide-react-native";
+import { postsAPI } from "../api/posts";
 
-function NewPostDetails() {
+function NewPostDetails({ navigation, route }: any) {
+    const { selectedImage, selectedImages, isMultiSelect } = route?.params || {};
     const Dp = require("../assets/Hari.png");
 
     const [text, setText] = useState("");
@@ -30,6 +32,31 @@ function NewPostDetails() {
         setHashTagInput(value);
         const tags = [...new Set(extract(value))];
         setHashTags(tags);
+    };
+
+    const handlePublish = async () => {
+        try {
+            const formData = new FormData();
+            formData.append("caption", text);
+            formData.append("hashtags", JSON.stringify(hashtags));
+            
+            const imagesToUpload = isMultiSelect && selectedImages?.length > 0
+                ? selectedImages
+                : (selectedImage ? [selectedImage] : []);
+
+            imagesToUpload.forEach((img: any, index: number) => {
+                formData.append("images", {
+                    uri: img.uri,
+                    type: "image/jpeg",
+                    name: `image_${index}.jpg`,
+                } as any);
+            });
+
+            await postsAPI.create(formData);
+            navigation.navigate("MainTabs");
+        } catch (error) {
+            console.log(error);
+        }
     };
 
     return (
@@ -54,8 +81,8 @@ function NewPostDetails() {
 
                     <View style={{ alignItems: "center", marginTop: 10 }}>
                         <Image
-                            source={Dp}
-                            resizeMode="contain"
+                            source={isMultiSelect && selectedImages?.length > 0 ? { uri: selectedImages[0].uri } : selectedImage ? { uri: selectedImage.uri } : Dp}
+                            resizeMode="cover"
                             style={{ width: "100%", height: 400 }}
                         />
                     </View>
@@ -174,7 +201,7 @@ function NewPostDetails() {
                         backgroundColor: "#5584EE"
                     }}
                 >
-                    <TouchableOpacity style={{ width: "100%", alignItems: "center" }}>
+                    <TouchableOpacity onPress={handlePublish} style={{ width: "100%", alignItems: "center" }}>
                         <Text
                             style={{
                                 color: "white",

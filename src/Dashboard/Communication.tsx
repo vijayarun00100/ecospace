@@ -1,145 +1,78 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, TextInput, Dimensions } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, TextInput, Dimensions, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bell, Search, SquarePen, Check, CheckCheck, Settings, Image as ImageIcon, Mic } from 'lucide-react-native';
+import { Bell, Search, SquarePen, Check, CheckCheck, Settings, Image as ImageIcon, Mic, X } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import { chatAPI } from '../api/chat';
+import { getUploadUrl } from '../api/config';
+import { usersAPI } from '../api/users';
 
 const { width } = Dimensions.get('window');
 
 const Communication = () => {
     const navigation = useNavigation<any>();
     const [activeTab, setActiveTab] = useState('Chat');
+    const [chatList, setChatList] = useState<any[]>([]);
+    const [communityList, setCommunityList] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [newChatModal, setNewChatModal] = useState(false);
+    const [userSearch, setUserSearch] = useState('');
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [searchLoading, setSearchLoading] = useState(false);
 
-    const chatList = [
-        { 
-            id: 1, 
-            name: 'John Britto', 
-            message: 'Recycled bag.jpg', 
-            time: '10:56 am', 
-            unread: 0, 
-            status: 'online',
-            image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200',
-            hasAttachment: true,
-            seen: true
-        },
-        { 
-            id: 2, 
-            name: 'Yogesh', 
-            message: 'Sustainability has become such...', 
-            time: '6:16 am', 
-            unread: 0, 
-            status: 'online',
-            image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
-            seen: true
-        },
-        { 
-            id: 3, 
-            name: 'Akshaya', 
-            message: 'Ok', 
-            time: '12:04 am', 
-            unread: 1, 
-            status: 'online',
-            image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200' 
-        },
-        { 
-            id: 4, 
-            name: 'Nithish', 
-            message: 'Hey, there', 
-            time: 'Yesterday', 
-            unread: 3, 
-            status: 'online',
-            image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200' 
-        },
-        { 
-            id: 5, 
-            name: 'Sri Nisha', 
-            message: 'You inspiring stories from the i...', 
-            time: 'Yesterday', 
-            unread: 0, 
-            status: 'online',
-            image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200',
-            seen: true
-        },
-        { 
-            id: 6, 
-            name: 'Kishore', 
-            message: 'In this two-fold segment, we ha...', 
-            time: 'Yesterday', 
-            unread: 0, 
-            status: 'online',
-            image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200',
-            seen: true
-        },
-        { 
-            id: 7, 
-            name: 'Priya', 
-            message: 'Sapling.jpg', 
-            time: 'Yesterday', 
-            unread: 0, 
-            status: 'offline',
-            image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
-            hasAttachment: true,
-            seen: true
-        },
-        { 
-            id: 8, 
-            name: 'Naveen', 
-            message: 'You did an amazing job buddy!', 
-            time: 'Yesterday', 
-            unread: 0, 
-            status: 'online',
-            image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
-            seen: true
-        },
-    ];
+    const fetchData = useCallback(async () => {
+        try {
+            setLoading(true);
+            const [chatsRes, commRes] = await Promise.all([
+                chatAPI.getChats(),
+                chatAPI.getCommunities(),
+            ]);
+            setChatList(chatsRes.data.chats || []);
+            setCommunityList(commRes.data.communities || []);
+        } catch (err) {
+            console.error('Communication fetch error:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
-    const communityList = [
-        {
-            id: 1,
-            name: 'Green Gardening',
-            message: 'Jessie sent a mes...',
-            time: '10:56 am',
-            unread: 1,
-            image: 'https://images.unsplash.com/photo-1416870230247-d0a91adb1c67?w=200',
-            participants: 20
-        },
-        {
-            id: 2,
-            name: 'Energy Savers',
-            message: 'Santhosh sent a...',
-            time: '8:45 pm',
-            unread: 23,
-            image: 'https://images.unsplash.com/photo-1500417148159-68083bd7333a?w=200',
-            participants: 47
-        },
-        {
-            id: 3,
-            name: 'Recycling Warriers',
-            message: 'Rakesh sent a me...',
-            time: '9:23 am',
-            unread: 1,
-            image: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=200',
-            participants: 10
-        },
-        {
-            id: 4,
-            name: 'Ecopreneur',
-            message: 'Sridhar sent a stic...',
-            time: '7:16 am',
-            unread: 56,
-            image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=200',
-            participants: 5
-        },
-        {
-            id: 5,
-            name: 'Sustain Products',
-            message: 'Narayanan sent a...',
-            time: '10:09 am',
-            unread: 1,
-            image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=200',
-            participants: 14
-        },
-    ];
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    const getTimeAgo = (date: string) => {
+        if (!date) return '';
+        const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+        if (seconds < 60) return 'just now';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        const days = Math.floor(hours / 24);
+        if (days < 7) return `${days}d ago`;
+        return 'last week';
+    };
+
+    const handleUserSearch = useCallback(async (query: string) => {
+        setUserSearch(query);
+        if (!query.trim()) { setSearchResults([]); return; }
+        setSearchLoading(true);
+        try {
+            const res = await usersAPI.search(query);
+            setSearchResults(res.data.users || []);
+        } catch (err) {
+            console.error('User search error:', err);
+        } finally {
+            setSearchLoading(false);
+        }
+    }, []);
+
+    const handleStartChat = async (selectedUser: any) => {
+        setNewChatModal(false);
+        setUserSearch('');
+        setSearchResults([]);
+        navigation.navigate('ChatScreen', { chatId: null, user: selectedUser, newChat: true });
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -147,13 +80,6 @@ const Communication = () => {
             <View style={styles.header}>
                 <Text style={styles.headerLogo}>ecospace</Text>
                 <View style={styles.headerRight}>
-                    <View style={styles.coinBadge}>
-                        <View style={styles.coinIcon}>
-                           <View style={styles.coinDot} />
-                           <View style={[styles.coinDot, { marginLeft: 1.5 }]} />
-                        </View>
-                        <Text style={styles.coinText}>1040</Text>
-                    </View>
                     <TouchableOpacity style={styles.headerIconButton}>
                         <Bell color="#000" size={24} />
                     </TouchableOpacity>
@@ -168,12 +94,10 @@ const Communication = () => {
                 <View style={styles.searchBox}>
                     <Search color="#BBB" size={24} />
                     <TextInput 
-                        placeholder=""
+                        placeholder="Search chats..."
+                        placeholderTextColor="#BBB"
                         style={styles.searchField}
                     />
-                    <TouchableOpacity>
-                        <Mic color="#BBB" size={24} />
-                    </TouchableOpacity>
                 </View>
             </View>
 
@@ -194,28 +118,37 @@ const Communication = () => {
             </View>
 
             {/* Content Container */}
+            {loading ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <ActivityIndicator size="large" color="#4F9A42" />
+                </View>
+            ) : (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.listContainer}>
                 {activeTab === 'Chat' ? (
+                    chatList.length === 0 ? (
+                        <View style={{ alignItems: 'center', marginTop: 60 }}>
+                            <Text style={{ color: '#999', fontSize: 16 }}>No chats yet. Start a conversation!</Text>
+                        </View>
+                    ) : (
                     chatList.map((chat) => (
-                        <TouchableOpacity key={chat.id} style={styles.chatItem}>
+                        <TouchableOpacity key={chat._id} style={styles.chatItem} onPress={() => navigation.navigate('ChatScreen', { chatId: chat._id, user: chat.user })}>
                             <View style={styles.avatarWrapper}>
-                                <Image source={{ uri: chat.image }} style={styles.chatAvatar} />
-                                {chat.status === 'online' && <View style={styles.statusDot} />}
+                                <Image 
+                                    source={{ uri: chat.user?.avatar ? getUploadUrl(chat.user.avatar) : 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200' }} 
+                                    style={styles.chatAvatar} 
+                                />
+                                <View style={styles.statusDot} />
                             </View>
                             <View style={styles.chatBody}>
                                 <View style={styles.chatHeader}>
-                                    <Text style={styles.senderName}>{chat.name}</Text>
-                                    <Text style={styles.chatTime}>{chat.time}</Text>
+                                    <Text style={styles.senderName}>{chat.user?.name || 'User'}</Text>
+                                    <Text style={styles.chatTime}>{getTimeAgo(chat.lastMessageAt)}</Text>
                                 </View>
                                 <View style={styles.chatFooter}>
                                     <View style={styles.messagePreview}>
-                                        {chat.seen && <CheckCheck size={16} color="#5584EE" style={{ marginRight: 4 }} />}
-                                        {chat.hasAttachment && <ImageIcon size={14} color="#BBB" style={{ marginRight: 4 }} />}
-                                        <Text 
-                                            numberOfLines={1} 
-                                            style={[styles.messageText, chat.unread > 0 && styles.unreadText]}
-                                        >
-                                            {chat.message}
+                                        {chat.unread === 0 && <CheckCheck size={16} color="#5584EE" style={{ marginRight: 4 }} />}
+                                        <Text numberOfLines={1} style={[styles.messageText, chat.unread > 0 && styles.unreadText]}>
+                                            {chat.lastMessage || 'Start a conversation'}
                                         </Text>
                                     </View>
                                     {chat.unread > 0 && (
@@ -227,30 +160,29 @@ const Communication = () => {
                             </View>
                         </TouchableOpacity>
                     ))
+                    )
                 ) : (
+                    communityList.length === 0 ? (
+                        <View style={{ alignItems: 'center', marginTop: 60 }}>
+                            <Text style={{ color: '#999', fontSize: 16 }}>No communities found. Join one!</Text>
+                        </View>
+                    ) : (
                     communityList.map((group) => (
-                        <TouchableOpacity key={group.id} style={styles.chatItem}>
-                            <Image source={{ uri: group.image }} style={styles.chatAvatar} />
+                        <TouchableOpacity key={group._id} style={styles.chatItem}>
+                            <Image 
+                                source={{ uri: group.image ? getUploadUrl(group.image) : 'https://images.unsplash.com/photo-1416870230247-d0a91adb1c67?w=200' }} 
+                                style={styles.chatAvatar} 
+                            />
                             <View style={styles.chatBody}>
                                 <View style={styles.chatHeader}>
                                     <Text style={styles.senderName}>{group.name}</Text>
-                                    <Text style={styles.chatTime}>{group.time}</Text>
+                                    <Text style={styles.chatTime}>{getTimeAgo(group.lastMessageAt)}</Text>
                                 </View>
                                 <View style={styles.chatFooter}>
                                     <View style={styles.participantStack}>
-                                        <View style={styles.avatarStack}>
-                                            {[1,2,3].map((i) => (
-                                                <Image 
-                                                    key={i} 
-                                                    source={{ uri: `https://i.pravatar.cc/100?u=${group.id + i}` }} 
-                                                    style={[styles.miniAvatar, { marginLeft: i === 1 ? 0 : -10 }]} 
-                                                />
-                                            ))}
-                                            <View style={[styles.miniAvatar, styles.countBadge]}>
-                                                <Text style={styles.countText}>+{group.participants}</Text>
-                                            </View>
-                                        </View>
-                                        <Text numberOfLines={1} style={styles.groupMessage}>{group.message}</Text>
+                                        <Text numberOfLines={1} style={styles.groupMessage}>
+                                            {group.lastMessage || `${group.memberCount} members`}
+                                        </Text>
                                     </View>
                                     {group.unread > 0 && (
                                         <View style={styles.unreadBadge}>
@@ -261,15 +193,58 @@ const Communication = () => {
                             </View>
                         </TouchableOpacity>
                     ))
+                    )
                 )}
             </ScrollView>
+            )}
 
             {/* FAB */}
             {activeTab === 'Chat' && (
-                <TouchableOpacity style={styles.fab}>
+                <TouchableOpacity style={styles.fab} onPress={() => setNewChatModal(true)}>
                     <SquarePen color="#FFF" size={28} strokeWidth={2.5} />
                 </TouchableOpacity>
             )}
+
+            {/* New Chat Modal */}
+            <Modal visible={newChatModal} animationType="slide" transparent={true}>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+                    <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, height: '70%' }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                            <Text style={{ fontSize: 20, fontWeight: '700' }}>New Chat</Text>
+                            <TouchableOpacity onPress={() => { setNewChatModal(false); setUserSearch(''); setSearchResults([]); }}>
+                                <X size={26} color="#999" />
+                            </TouchableOpacity>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F5', borderRadius: 20, paddingHorizontal: 14, marginBottom: 16 }}>
+                            <Search size={18} color="#AAA" />
+                            <TextInput
+                                style={{ flex: 1, marginLeft: 10, fontSize: 16, height: 44, color: '#141414' }}
+                                placeholder="Search for a user..."
+                                value={userSearch}
+                                onChangeText={handleUserSearch}
+                                autoFocus
+                            />
+                        </View>
+                        {searchLoading ? (
+                            <ActivityIndicator color="#4F9A42" />
+                        ) : searchResults.length === 0 && userSearch.trim() ? (
+                            <Text style={{ textAlign: 'center', color: '#999', marginTop: 20 }}>No users found</Text>
+                        ) : (
+                            <ScrollView showsVerticalScrollIndicator={false}>
+                                {searchResults.map(u => (
+                                    <TouchableOpacity key={u._id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' }} onPress={() => handleStartChat(u)}>
+                                        <Image source={{ uri: u.avatar ? getUploadUrl(u.avatar) : 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=60' }} style={{ width: 46, height: 46, borderRadius: 23, marginRight: 14 }} />
+                                        <View>
+                                            <Text style={{ fontSize: 16, fontWeight: '600', color: '#141414' }}>{u.name}</Text>
+                                            {u.bio ? <Text style={{ fontSize: 13, color: '#888', marginTop: 2 }}>{u.bio}</Text> : null}
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        )}
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };

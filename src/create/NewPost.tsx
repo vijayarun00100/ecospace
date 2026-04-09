@@ -16,7 +16,7 @@ import { CameraRoll } from "@react-native-camera-roll/camera-roll";
 const { width } = Dimensions.get("window");
 const ITEM_SIZE = width / 3;
 
-export default function NewPost() {
+export default function NewPost({ navigation }: any) {
 
   const [images, setImages] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -152,7 +152,7 @@ export default function NewPost() {
           </Text>
         </View>
 
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate("NewPostDetails", { selectedImage, selectedImages, isMultiSelect })}>
           <Text style={{ color: "#5584EE", fontSize: 18 }}>
             Next
           </Text>

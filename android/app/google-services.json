@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "366980377728",
+    "project_id": "ecospace-9e602",
+    "storage_bucket": "ecospace-9e602.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:366980377728:android:bdefcfaa78e033af038a65",
+        "android_client_info": {
+          "package_name": "com.ecospace"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "366980377728-f0t9ftn8ds07e9cmog95ls3299ofl6e3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ecospace",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "366980377728-sb8tucgr2jn0kmahv90gqpjqjr1voc6u.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7IGBXLXPBMxopsf_tGU8bl7SJL979Ysc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "366980377728-sb8tucgr2jn0kmahv90gqpjqjr1voc6u.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

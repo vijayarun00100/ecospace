@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Dimensions, Platform } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Dimensions, Platform, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Bell, Search, EllipsisVertical, Grid, FileText, ShoppingBag, Check, MessageCircle } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+import { ChevronLeft, Bell, Search, EllipsisVertical, Grid, FileText, ShoppingBag, Check, MessageCircle, UserPlus, UserMinus } from 'lucide-react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { usersAPI } from '../api/users';
+import { getUploadUrl } from '../api/config';
+import { useAuth } from '../context/AuthContext';
 
 // Asset imports
 import CarbonSave from '../assets/Carbon_save.svg';
@@ -13,22 +16,137 @@ const { width } = Dimensions.get('window');
 
 const Profile = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const { userId } = route.params || {};
+  const { logout } = useAuth();
+
   const [activeTab, setActiveTab] = useState('Posts');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [content, setContent] = useState<any[]>([]);
+  const [isMe, setIsMe] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
 
-  const stats = [
-    { label: 'Posts', value: '31' },
-    { label: 'Articles', value: '08' },
-    { label: 'Followers', value: '257' },
-    { label: 'Following', value: '183' },
-  ];
+  const fetchData = useCallback(async () => {
+    try {
+      let profileRes;
+      if (userId) {
+        profileRes = await usersAPI.getById(userId);
+        setIsMe(false);
+      } else {
+        profileRes = await usersAPI.getMe();
+        setIsMe(true);
+      }
 
-  const gridImages = [
-    'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=400',
-    'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400',
-    'https://images.unsplash.com/photo-1501854140801-50d01674ba3e?w=400',
-    'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400',
-    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400',
-    'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=400',
+      const userData = profileRes.data.user;
+      setProfile(userData);
+      setStats(profileRes.data.stats);
+      
+      // Determine if I'm following this user (if not me)
+      if (userId) {
+          const meRes = await usersAPI.getMe();
+          const me = meRes.data.user;
+          setIsFollowing(me.following?.some((id: any) => id === userId || id._id === userId));
+      }
+
+      // Fetch initial content (Posts)
+      fetchTabContent(userId || userData._id, 'Posts');
+    } catch (err) {
+      console.error("Profile fetch error:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [userId]);
+
+  const fetchTabContent = async (uid: string, tab: string) => {
+      try {
+          if (tab === 'Posts') {
+              const res = await usersAPI.getUserPosts(uid);
+              setContent(res.data.posts || []);
+          } else if (tab === 'Articles') {
+              const res = await usersAPI.getUserArticles(uid);
+              setContent(res.data.articles || []);
+          } else if (tab === 'Products') {
+              const res = await usersAPI.getUserProducts(uid);
+              setContent(res.data.products || []);
+          } else {
+              setContent([]);
+          }
+      } catch (err) {
+          console.error(`Fetch ${tab} error:`, err);
+      }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchData();
+  };
+
+  const handleTabChange = (tab: string) => {
+      setActiveTab(tab);
+      if (profile) {
+          fetchTabContent(profile._id, tab);
+      }
+  };
+
+  const handleFollow = async () => {
+      if (!profile || isMe) return;
+      try {
+          const res = await usersAPI.follow(profile._id);
+          setIsFollowing(res.data.following);
+          // Update local follower count
+          setStats((prev: any) => ({
+              ...prev,
+              followers: res.data.following ? prev.followers + 1 : prev.followers - 1
+          }));
+      } catch (err) {
+          Alert.alert("Error", "Could not update follow status.");
+      }
+  };
+
+  const handleLogout = () => {
+      Alert.alert(
+          "Logout",
+          "Are you sure you want to log out of EcoSpace?",
+          [
+              { text: "Cancel", style: "cancel" },
+              { text: "Logout", style: "destructive", onPress: async () => await logout() }
+          ]
+      );
+  };
+
+  if (loading && !refreshing) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: '#FFFBE6' }}>
+        <ActivityIndicator size="large" color="#4F9A42" />
+      </View>
+    );
+  }
+
+  if (!profile) {
+      return (
+          <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+              <Text>User not found</Text>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 20 }}>
+                  <Text style={{ color: '#4F9A42' }}>Go Back</Text>
+              </TouchableOpacity>
+          </SafeAreaView>
+      );
+  }
+
+  const displayStats = [
+    { label: 'Posts', value: stats?.posts || 0 },
+    { label: 'Articles', value: stats?.articles || 0 },
+    { label: 'Products', value: stats?.products || 0 },
+    { label: 'Followers', value: stats?.followers || 0 },
+    { label: 'Following', value: stats?.following || 0 },
   ];
 
   return (
@@ -51,43 +169,54 @@ const Profile = () => {
           <TouchableOpacity style={styles.iconButton}>
             <Bell color="#141414" size={26} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity 
+            style={styles.iconButton} 
+            onPress={() => isMe ? navigation.navigate('Chat') : navigation.navigate('ChatScreen', { receiverId: profile._id, receiverName: profile.name })}
+          >
              <View style={styles.chatIconWrapper}>
                 <MessageCircle color="#141414" size={26} />
                 <View style={styles.chatDot} />
              </View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <EllipsisVertical color="#141414" size={26} />
-          </TouchableOpacity>
+          {isMe && (
+            <TouchableOpacity style={styles.iconButton} onPress={handleLogout}>
+                <EllipsisVertical color="#141414" size={26} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#4F9A42"]} />}
+      >
         {/* Profile Info */}
         <View style={styles.profileInfo}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatarGlow} />
             <View style={styles.avatarBorder}>
               <Image
-                source={{ uri: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400' }}
+                source={{ uri: profile.avatar ? getUploadUrl(profile.avatar) : 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400' }}
                 style={styles.avatar}
               />
             </View>
           </View>
           <View style={styles.nameRow}>
-            <Text style={styles.userName}>Christopher</Text>
-            <View style={styles.verifiedBadgeContainer}>
-              <Check color="#FFF" size={10} strokeWidth={4} />
-            </View>
+            <Text style={styles.userName}>{profile.name}</Text>
+            {profile.isVerified && (
+                <View style={styles.verifiedBadgeContainer}>
+                <Check color="#FFF" size={10} strokeWidth={4} />
+                </View>
+            )}
           </View>
-          <Text style={styles.userBio}>Nature Activist</Text>
+          <Text style={styles.userBio}>{profile.bio || 'EcoSpace Enthusiast'}</Text>
         </View>
 
         {/* Stats Row with Light Blue BG */}
         <View style={styles.statsRowBackground}>
           <View style={styles.statsRow}>
-            {stats.map((item, index) => (
+            {displayStats.map((item, index) => (
               <View key={index} style={styles.statItem}>
                 <Text style={styles.statValue}>{item.value}</Text>
                 <Text style={styles.statLabel}>{item.label}</Text>
@@ -99,7 +228,7 @@ const Profile = () => {
         {/* Achievement Cards */}
         <View style={styles.cardsRow}>
           <View style={[styles.statusCard, { backgroundColor: '#FFF9C4' }]}>
-             <Text style={styles.cardValueTop}>2 Kg</Text>
+             <Text style={styles.cardValueTop}>{profile.carbonSaved || 0} Kg</Text>
              <View style={styles.cardMain}>
                 <View style={styles.cardIconCircle}>
                     <CarbonSave width={32} height={32} />
@@ -111,7 +240,7 @@ const Profile = () => {
              </View>
           </View>
           <View style={[styles.statusCard, { backgroundColor: '#FFF9C4' }]}>
-            <Text style={styles.cardValueTop}>5 Kg</Text>
+            <Text style={styles.cardValueTop}>{profile.plasticSaved || 0} Kg</Text>
             <View style={styles.cardMain}>
                 <View style={styles.cardIconCircle}>
                     <PlasticSave width={32} height={32} />
@@ -126,9 +255,31 @@ const Profile = () => {
 
         {/* Action Buttons - Outlined Style */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.outlinedBtn}>
-            <Text style={styles.outlinedBtnText}>Edit Profile</Text>
-          </TouchableOpacity>
+          {isMe ? (
+              <TouchableOpacity style={styles.outlinedBtn} onPress={() => navigation.navigate('EditProfile')}>
+                <Text style={styles.outlinedBtnText}>Edit Profile</Text>
+              </TouchableOpacity>
+          ) : (
+                <TouchableOpacity 
+                    style={[styles.outlinedBtn, isFollowing && { backgroundColor: '#5584EE' }]} 
+                    onPress={handleFollow}
+                >
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {isFollowing ? <UserMinus size={18} color="#FFF" /> : <UserPlus size={18} color="#141414" />}
+                        <Text style={[styles.outlinedBtnText, isFollowing && { color: '#FFF', marginLeft: 8 }]}>
+                            {isFollowing ? 'Unfollow' : 'Follow'}
+                        </Text>
+                    </View>
+                </TouchableOpacity>
+          )}
+          {!isMe && (
+            <TouchableOpacity 
+                style={styles.outlinedBtn} 
+                onPress={() => navigation.navigate('ChatScreen', { receiverId: profile._id, receiverName: profile.name })}
+            >
+                <Text style={styles.outlinedBtnText}>Message</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.outlinedBtn}>
             <Text style={styles.outlinedBtnText}>Share Profile</Text>
           </TouchableOpacity>
@@ -140,7 +291,7 @@ const Profile = () => {
             {['Posts', 'Articles', 'Products'].map((tab) => (
                 <TouchableOpacity
                 key={tab}
-                onPress={() => setActiveTab(tab)}
+                onPress={() => handleTabChange(tab)}
                 style={[styles.tabItem, activeTab === tab && styles.activeTabItem]}
                 >
                 <View style={styles.tabIconLabel}>
@@ -157,11 +308,35 @@ const Profile = () => {
 
         {/* Content Grid */}
         <View style={styles.contentGrid}>
-          {gridImages.map((uri, index) => (
-            <TouchableOpacity key={index} style={styles.gridItem}>
-              <Image source={{ uri }} style={styles.gridImage} />
-            </TouchableOpacity>
-          ))}
+          {content.length === 0 ? (
+              <View style={{ width: '100%', padding: 40, alignItems: 'center' }}>
+                  <Text style={{ color: '#BBB' }}>No {activeTab.toLowerCase()} yet.</Text>
+              </View>
+          ) : (
+              content.map((item, index) => (
+                    <TouchableOpacity 
+                        key={item._id || index} 
+                        style={styles.gridItem}
+                        onPress={() => {
+                            if (activeTab === 'Posts') {
+                                // navigation.navigate('PostDetail', { postId: item._id });
+                            } else if (activeTab === 'Articles') {
+                                navigation.navigate('TopArticle', { article: item });
+                            } else if (activeTab === 'Products') {
+                                navigation.navigate('Product', { productId: item._id });
+                            }
+                        }}
+                    >
+                    <Image 
+                        source={{ 
+                            uri: (activeTab === 'Articles' ? getUploadUrl(item.image) : getUploadUrl(item.images?.[0])) || 
+                                 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=400' 
+                        }} 
+                        style={styles.gridImage} 
+                    />
+                    </TouchableOpacity>
+              ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -171,7 +346,7 @@ const Profile = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFBE6',
   },
   headerBgContainer: {
     position: 'absolute',
@@ -419,5 +594,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 });
+
 
 export default Profile;

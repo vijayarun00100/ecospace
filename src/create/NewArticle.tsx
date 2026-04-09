@@ -6,10 +6,12 @@ import {
     TouchableOpacity,
     ScrollView,
     KeyboardAvoidingView,
-    Platform
+    Platform,
+    Alert
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, X, Clock3, CalendarCheck } from "lucide-react-native";
+import { articlesAPI } from "../api/articles";
 
 import InputCard from "../components/InputCard";
 import AddContentCard from "../components/AddContentCard";
@@ -24,6 +26,8 @@ function NewArticle() {
     const [category, setCategory] = useState("DIY Tips");
     const [hashtags, setHashTags] = useState<string[]>([]);
     const [hashtagInput, setHashTagInput] = useState("");
+    const [readingTime, setReadingTime] = useState("");
+    const [scheduledAt, setScheduledAt] = useState("");
 
     const options = [
         "DIY Tips",
@@ -46,17 +50,25 @@ function NewArticle() {
         setHashTags(tags);
     };
 
-    const handlePublish = () => {
-        const data = {
-            title,
-            category,
-            contentType: selection,
-            blogText,
-            hashtags,
-            images
-        };
+    const handlePublish = async () => {
+        try {
+            const formData = new FormData();
+            formData.append("title", title);
+            formData.append("category", category);
+            formData.append("content", blogText);
+            formData.append("hashtags", JSON.stringify(hashtags));
+            if (readingTime) formData.append("readingTime", readingTime);
+            if (scheduledAt) formData.append("scheduledAt", scheduledAt);
+            
+            images.forEach((img, index) => {
+                formData.append("images", { uri: img, type: "image/jpeg", name: `image_${index}.jpg` } as any);
+            });
 
-        console.log("Publishing:", data);
+            await articlesAPI.create(formData);
+            Alert.alert("Success", "Article Published!");
+        } catch (error) {
+            console.log(error);
+        }
     };
 
     return (
@@ -190,11 +202,13 @@ function NewArticle() {
                         <View style={{ flexDirection: "row", borderBottomWidth: 2, padding: 10  ,  alignItems:"center"}}>
                             <Clock3 color = {"green"} style={{ marginRight: 20,}} />
                             <Text>Reading Time:</Text>
+                            <TextInput value={readingTime} onChangeText={setReadingTime} placeholder="e.g. 5" keyboardType="numeric" style={{ marginLeft: 10, flex: 1, padding: 0 }} />
                         </View>
 
                         <View style={{ flexDirection: "row", borderBottomWidth: 2, padding: 10 , alignItems:"center" }}>
                             <CalendarCheck color = {"green"} style={{ marginRight: 20}} />
                             <Text>Schedule Publish</Text>
+                            <TextInput value={scheduledAt} onChangeText={setScheduledAt} placeholder="YYYY-MM-DD HH:mm (Optional)" style={{ marginLeft: 10, flex: 1, padding: 0 }} />
                         </View>
                     </View>
                 </ScrollView>

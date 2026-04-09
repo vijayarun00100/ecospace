@@ -4,15 +4,20 @@ import { ChevronDown } from "lucide-react-native";
 
 const units = ["Litre", "Kg", "Piece", "Pack"];
 
-function Quantity() {
+interface QuantityProps {
+    quantities: string[];
+    onAddQuantity: (qty: string) => void;
+    onRemoveQuantity: (index: number) => void;
+}
+
+function Quantity({ quantities, onAddQuantity, onRemoveQuantity }: QuantityProps) {
     const [selectedUnit, setSelectedUnit] = useState("Litre");
     const [showUnits, setShowUnits] = useState(false);
-    const [quantities, setQuantities] = useState(["1 litre", "1.5 litre", "2 litre"]);
     const [inputValue, setInputValue] = useState("");
 
     const handleAdd = () => {
         if (inputValue.trim()) {
-            setQuantities(prev => [...prev, `${inputValue} ${selectedUnit}`]);
+            onAddQuantity(`${inputValue} ${selectedUnit}`);
             setInputValue("");
         }
     };
@@ -24,69 +29,79 @@ function Quantity() {
             borderStyle: "dashed",
             borderRadius: 12,
             padding: 12,
-            backgroundColor: "#FDFAF0"
+            backgroundColor: "#FDFAF0",
+            zIndex: 100
         }}>
             {/* Header */}
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12, zIndex: 101 }}>
                 <Text style={{ fontSize: 16, fontWeight: "600" }}>Quantity:</Text>
 
                 {/* Unit Dropdown */}
-                <TouchableOpacity
-                    onPress={() => setShowUnits(!showUnits)}
-                    style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        borderWidth: 1.5,
-                        borderColor: "#BDAE7D",
-                        borderRadius: 20,
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        backgroundColor: "white"
-                    }}
-                >
-                    <Text style={{ marginRight: 4, fontWeight: "500" }}>{selectedUnit}</Text>
-                    <ChevronDown width={16} height={16} />
-                </TouchableOpacity>
+                <View>
+                    <TouchableOpacity
+                        onPress={() => setShowUnits(!showUnits)}
+                        style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            borderWidth: 1.5,
+                            borderColor: "#BDAE7D",
+                            borderRadius: 20,
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            backgroundColor: "white"
+                        }}
+                    >
+                        <Text style={{ marginRight: 4, fontWeight: "500" }}>{selectedUnit}</Text>
+                        <ChevronDown width={16} height={16} />
+                    </TouchableOpacity>
 
-                {/* Dropdown Options */}
-                {showUnits && (
-                    <View style={{
-                        position: "absolute",
-                        top: 40,
-                        right: 0,
-                        backgroundColor: "white",
-                        borderWidth: 1.5,
-                        borderColor: "#BDAE7D",
-                        borderRadius: 10,
-                        zIndex: 10,
-                        minWidth: 100
-                    }}>
-                        {units.map(unit => (
-                            <TouchableOpacity
-                                key={unit}
-                                onPress={() => { setSelectedUnit(unit); setShowUnits(false); }}
-                                style={{ padding: 10 }}
-                            >
-                                <Text>{unit}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
+                    {/* Dropdown Options */}
+                    {showUnits && (
+                        <View style={{
+                            position: "absolute",
+                            top: 40,
+                            right: 0,
+                            backgroundColor: "white",
+                            borderWidth: 1.5,
+                            borderColor: "#BDAE7D",
+                            borderRadius: 10,
+                            zIndex: 110,
+                            minWidth: 100
+                        }}>
+                            {units.map(unit => (
+                                <TouchableOpacity
+                                    key={unit}
+                                    onPress={() => { setSelectedUnit(unit); setShowUnits(false); }}
+                                    style={{ padding: 10 }}
+                                >
+                                    <Text>{unit}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
+                </View>
             </View>
 
             {/* Quantity Tags */}
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {quantities.map((qty, index) => (
-                    <View key={index} style={{
-                        borderWidth: 1.5,
-                        borderColor: "#BDAE7D",
-                        borderRadius: 20,
-                        paddingHorizontal: 14,
-                        paddingVertical: 8,
-                        backgroundColor: "white"
-                    }}>
+                    <TouchableOpacity 
+                        key={index} 
+                        onPress={() => onRemoveQuantity(index)}
+                        style={{
+                            borderWidth: 1.5,
+                            borderColor: "#BDAE7D",
+                            borderRadius: 20,
+                            paddingHorizontal: 14,
+                            paddingVertical: 8,
+                            backgroundColor: "white",
+                            flexDirection: 'row',
+                            alignItems: 'center'
+                        }}
+                    >
                         <Text style={{ color: "#555" }}>{qty}</Text>
-                    </View>
+                        <Text style={{ marginLeft: 6, color: '#FF4444', fontWeight: 'bold' }}>×</Text>
+                    </TouchableOpacity>
                 ))}
 
                 {/* Add Input */}

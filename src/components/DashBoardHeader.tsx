@@ -32,7 +32,7 @@ function DashBoardHeader({ title }: { title?: string }){
                         <TouchableOpacity style={{marginRight:12}}>
                             <Bell size={(30)}/>
                         </TouchableOpacity>
-                        <TouchableOpacity>
+                        <TouchableOpacity onPress={() => navigation.navigate('Communication')}>
                             <MessageCircleMore size={(30)}/>
                         </TouchableOpacity>
                     </View>

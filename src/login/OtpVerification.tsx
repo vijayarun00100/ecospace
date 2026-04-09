@@ -1,131 +1,150 @@
-import react , {useRef , useState} from "react";
-import {View , Text , Image , TouchableOpacity , TextInput , KeyboardAvoidingView, Platform, Touchable , ScrollView } from "react-native";
-import {SafeAreaView} from "react-native-safe-area-context";
+import React, { useState, useRef } from "react";
+import { View, Text, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import BackButton from "../components/BackButton";
+import { authAPI } from "../api/auth";
+import { useAuth } from "../context/AuthContext";
 
-function OtpVerification({navigation} : any){
-    
-    const [Otp , SetOtp] = useState(["" , "" , "" , ""]);
-    const inputs = [
-        useRef<TextInput>(null) , useRef<TextInput>(null) , useRef<TextInput>(null) , useRef<TextInput>(null)
-    ];
-    const HandleChange = (text :string, index:number) => {
-        const newOtp = [...Otp];
+function OtpVerification({ navigation, route }: any) {
+    const email = route?.params?.email || "";
+    const { login } = useAuth();
+    const [otp, setOtp] = useState(["", "", "", ""]);
+    const [loading, setLoading] = useState(false);
+    const inputs = useRef<TextInput[]>([]);
+
+    const handleChange = (text: string, index: number) => {
+        const newOtp = [...otp];
         newOtp[index] = text;
-        SetOtp(newOtp);
-        if(text && index < 3){
-            inputs[index + 1].current?.focus();
+        setOtp(newOtp);
+
+        if (text && index < 3) {
+            inputs.current[index + 1]?.focus();
         }
     };
 
-    const HandleErase = (text:string , index:number)=>{
-        if(!text && index > 0){
-            inputs[index-1].current?.focus();
+    const handleKeyPress = (e: any, index: number) => {
+        if (e.nativeEvent.key === "Backspace" && !otp[index] && index > 0) {
+            inputs.current[index - 1]?.focus();
         }
-    }
+    };
 
-    const [focusedIndex , setFocusedIndex] = useState<number | null>(null);
-    return(
-        <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-            <SafeAreaView style={{flex:1,flexDirection:"column" , justifyContent:"space-between"}}>
+    const handleVerify = async () => {
+        const otpString = otp.join("");
+        if (otpString.length !== 4) {
+            Alert.alert("Error", "Please enter the 4-digit OTP");
+            return;
+        }
+        try {
+            setLoading(true);
+            const res = await authAPI.verifyOtp(email, otpString);
+            await login(res.data.token, res.data.user);
+
+            if (res.data.user.onboardingDone) {
+                navigation.reset({ index: 0, routes: [{ name: "MainTabs" }] });
+            } else {
+                navigation.navigate("Details");
+            }
+        } catch (err: any) {
+            Alert.alert("Error", err.response?.data?.error || "Invalid OTP");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResend = async () => {
+        try {
+            await authAPI.sendOtp(email);
+            Alert.alert("Success", "OTP resent to your email");
+        } catch (err: any) {
+            Alert.alert("Error", err.response?.data?.error || "Failed to resend OTP");
+        }
+    };
+
+    return (
+        <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+            <SafeAreaView style={{
+                flex: 1,
+                flexDirection: "column",
+                justifyContent: "space-between"
+            }}>
                 <View>
-                    <BackButton title = "Verify otp" />
-                    <View style={{marginHorizontal:20}}>
+                    <BackButton />
+                    <View style={{ paddingHorizontal: 16 }}>
                         <Text style={{
-                            color:"#141414",
-                            fontSize:20,
-                            fontWeight:"700",
-                            marginBottom:10
-                        }}>Confirm Your Number</Text>
+                            color: "#141414",
+                            fontSize: 20,
+                            fontWeight: "700",
+                            marginBottom: 10
+                        }}>Enter Verification Code</Text>
                         <Text style={{
-                            color:"#141414",
-                            fontSize:16,
-                            fontWeight:"400",
-                            marginBottom:40
-                        }}>Enter the number sent to the email: 
-                        </Text>
-                    </View>
-                    <View style={{ marginHorizontal: 20, flexDirection: "row", justifyContent:"space-between" }}>
-                      {Otp.map((digit, index) => (
-                        <View
-                          key={index}
-                          style={{
-                            borderWidth: 2,
-                            borderColor: focusedIndex === index ? "#4F9A42" : "#8B8B8B",
-                            width: 70,
-                            height: 70,
-                            borderRadius: 25,
+                            color: "#141414",
+                            fontSize: 16,
+                            fontWeight: "400",
+                            marginBottom: 40
+                        }}>We sent an OTP to {email}</Text>
+
+                        <View style={{
+                            flexDirection: "row",
                             justifyContent: "center",
-                            alignItems: "center",
-                            backgroundColor: focusedIndex == index ? "#D4F2CF" : "#FFFBE6",
-                          }}
-                        >
-                          <TextInput
-                            style={{
-                              color: "#141414",
-                              fontSize: 24,
-                              fontWeight: "600",
-                              textAlign: "center",
-                            }}
-                            ref={inputs[index]}
-                            keyboardType="number-pad"
-                            maxLength={1}
-                            value={digit}
-                            onChangeText={(text) => HandleChange(text, index)}
-                            onFocus={() => setFocusedIndex(index)}
-                            onBlur={() => setFocusedIndex(null)}
-                            onKeyPress={({ nativeEvent }) =>
-                              nativeEvent.key === "Backspace" && HandleErase(digit, index)
-                            }
-                          />
+                            gap: 15,
+                        }}>
+                            {otp.map((digit, index) => (
+                                <TextInput
+                                    key={index}
+                                    ref={(ref) => { if (ref) inputs.current[index] = ref; }}
+                                    style={{
+                                        width: 60,
+                                        height: 60,
+                                        borderWidth: 2,
+                                        borderColor: digit ? "#5584EE" : "#8B8B8B",
+                                        borderRadius: 15,
+                                        fontSize: 24,
+                                        fontWeight: "700",
+                                        textAlign: "center",
+                                        color: "#141414",
+                                    }}
+                                    value={digit}
+                                    onChangeText={(text) => handleChange(text, index)}
+                                    onKeyPress={(e) => handleKeyPress(e, index)}
+                                    keyboardType="number-pad"
+                                    maxLength={1}
+                                />
+                            ))}
                         </View>
-                      ))}
-                    </View>
-                    <TouchableOpacity style={{
-                        marginHorizontal:60,
-                        // borderWidth:2,
-                        // borderColor:"blue",
-                        marginTop:40,
-                        height:60,
-                        justifyContent:"center",
-                        alignItems:"center",
-                        borderRadius:50,
-                        backgroundColor:"#FFFBE6",
-                        borderColor:"#5584EE",
-                        borderWidth:2,
-                        marginBottom:20
-                    }}>
-                        <Text style={{
-                            color:"#5584EE",
-                            fontWeight:"500",
-                            letterSpacing:2,
-                            fontSize:18,
-                        }}>Resend OTP</Text>
-                    </TouchableOpacity>
-                </View>
-                
-                <View>
 
-                    <TouchableOpacity style={{
-                        marginHorizontal:20,
-                        // borderWidth:2,
-                        // borderColor:"blue",
-                        height:60,
-                        justifyContent:"center",
-                        alignItems:"center",
-                        borderRadius:50,
-                        backgroundColor:"#5584EE"
-                    }}
-                    onPress={() => navigation.navigate('Details')}
-                    >
-                        <Text style={{
-                            color:"white",
-                            fontWeight:"500",
-                            letterSpacing:2,
-                            fontSize:18,
-                        }}>Confirm</Text>
-                    </TouchableOpacity>
+                        <TouchableOpacity onPress={handleResend} style={{ marginTop: 30, alignItems: "center" }}>
+                            <Text style={{ color: "#5584EE", fontSize: 16 }}>Resend OTP</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
+
+                <TouchableOpacity
+                    style={{
+                        marginHorizontal: 30,
+                        marginBottom: 10,
+                        height: 60,
+                        justifyContent: "center",
+                        alignItems: "center",
+                        borderRadius: 50,
+                        backgroundColor: loading ? "#8BB4F7" : "#5584EE",
+                    }}
+                    onPress={handleVerify}
+                    disabled={loading}
+                >
+                    {loading ? (
+                        <ActivityIndicator color="white" />
+                    ) : (
+                        <Text style={{
+                            color: "white",
+                            fontWeight: "500",
+                            letterSpacing: 2,
+                            fontSize: 18,
+                        }}>Verify</Text>
+                    )}
+                </TouchableOpacity>
             </SafeAreaView>
         </KeyboardAvoidingView>
     );

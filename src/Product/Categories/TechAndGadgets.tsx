@@ -56,7 +56,7 @@ function TechAndGadgets() {
             }}
           >
             <TouchableOpacity
-              onPress={() => navigation.navigate('Shop')}
+              onPress={() => navigation.navigate('Shop', { category: 'Tech & Gadgets', q: item.name })}
               style={{
                 width: 70,        // ⭐ fixed size circle
                 height: 70,

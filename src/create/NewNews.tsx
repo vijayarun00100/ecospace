@@ -8,10 +8,12 @@ import {
     ScrollView,
     KeyboardAvoidingView,
     PermissionsAndroid,
-    Platform
+    Platform,
+    Alert
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, X, Eye, CalendarCheck, ChevronRight, MapPin, FileUp } from "lucide-react-native";
+import { newsAPI } from "../api/articles";
 import { Linking } from "react-native";
 import InputCard from "../components/InputCard";
 import AddContentCard from "../components/AddContentCard";
@@ -30,6 +32,7 @@ function NewNews() {
     const [hashtags, setHashTags] = useState<string[]>([]);
     const [hashtagInput, setHashTagInput] = useState("");
     const [imageUri, setImageUri] = useState(null);
+    const [scheduledAt, setScheduledAt] = useState("");
     const options = [
         "DIY Tips",
         "Health",
@@ -51,18 +54,23 @@ function NewNews() {
         setHashTags(tags);
     };
 
-    const handlePublish = () => {
-        const data = {
-            title,
-            sourceLink,
-            category,
-            contentType: selection,
-            blogText,
-            hashtags,
-            images
-        };
+    const handlePublish = async () => {
+        try {
+            const formData = new FormData();
+            formData.append("title", title);
+            formData.append("category", category);
+            formData.append("content", blogText);
+            formData.append("sourceLink", sourceLink);
+            if (scheduledAt) formData.append("scheduledAt", scheduledAt);
+            if (imageUri) {
+                formData.append("image", { uri: imageUri, type: "image/jpeg", name: "cover.jpg" } as any);
+            }
 
-        console.log("Publishing:", data);
+            await newsAPI.create(formData);
+            Alert.alert("Success", "News Published!");
+        } catch (error) {
+            console.log(error);
+        }
     };
 
     const requestPermission = async () => {
@@ -357,6 +365,7 @@ function NewNews() {
                         <View style={{ flexDirection: "row", borderBottomWidth: 2, padding: 10, alignItems: "center" }}>
                             <CalendarCheck color="green" style={{ marginRight: 20 }} />
                             <Text>Schedule Publish</Text>
+                            <TextInput value={scheduledAt} onChangeText={setScheduledAt} placeholder="YYYY-MM-DD HH:mm (Optional)" style={{ marginLeft: 10, flex: 1, padding: 0 }} />
                         </View>
                     </View>
                 </ScrollView>

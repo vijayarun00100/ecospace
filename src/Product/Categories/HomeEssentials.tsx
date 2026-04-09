@@ -58,7 +58,7 @@ function HomeEssentials() {
             }}
           >
             <TouchableOpacity
-              onPress={() => navigation.navigate(item.name === 'Bottle' ? 'Shop' : 'Product')}
+              onPress={() => navigation.navigate('Shop', { category: 'Home Essentials', q: item.name })}
               style={{
                 width: 70, 
                 height: 70,

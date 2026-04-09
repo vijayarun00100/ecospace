@@ -1,9 +1,59 @@
-import react from "react";
-import {View , Text , Image , TouchableOpacity} from 'react-native';
-import {SafeAreaView} from "react-native-safe-area-context";
+import React, { useEffect } from "react";
+import { View, Text, Image, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { authAPI } from "../api/auth";
+import { useAuth } from "../context/AuthContext";
 import LoginMenuImage from "../assets/LoginMenu_.svg";
 import Google from "../assets/Google.svg";
-function LoginMenu({navigation} : any){
+
+function LoginMenu({ navigation }: any) {
+    const { login } = useAuth();
+
+    useEffect(() => {
+        GoogleSignin.configure({
+            webClientId: '366980377728-sb8tucgr2jn0kmahv90gqpjqjr1voc6u.apps.googleusercontent.com',
+            offlineAccess: true,
+        });
+    }, []);
+
+    const handleGoogleLogin = async () => {
+        try {
+            await GoogleSignin.hasPlayServices();
+            const response = await GoogleSignin.signIn();
+            const user = response.data?.user;
+            
+            if (!user) {
+                throw new Error("No user data received from Google");
+            }
+            
+            // Call backend to login/register with google
+            const res = await authAPI.googleSignIn({
+                email: user.email,
+                name: user.name ?? (user.givenName + " " + user.familyName),
+                photo: user.photo ?? undefined,
+                googleId: user.id,
+            });
+
+            await login(res.data.token, res.data.user);
+
+            if (res.data.user.onboardingDone) {
+                navigation.reset({ index: 0, routes: [{ name: "MainTabs" }] });
+            } else {
+                navigation.navigate("Details");
+            }
+        } catch (error: any) {
+            if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+                // user cancelled the login flow
+            } else if (error.code === statusCodes.IN_PROGRESS) {
+                // operation (e.g. sign in) is in progress already
+            } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+                Alert.alert("Error", "Play services not available or outdated");
+            } else {
+                Alert.alert("Error", "Google login failed: " + error.message);
+            }
+        }
+    };
     return(
         <SafeAreaView style= {{flex:1 , flexDirection:"column" , width:"100%", height:"100%"}}>
             <View style={{
@@ -146,13 +196,15 @@ function LoginMenu({navigation} : any){
                         }}>
                             Signup with
                         </Text>
-                        <View
-                         style={{
-                            justifyContent:"center",
-                            alignItems:"center"
-                         }}>
+                        <TouchableOpacity 
+                            onPress={handleGoogleLogin}
+                            style={{
+                                justifyContent: "center",
+                                alignItems: "center"
+                            }}
+                        >
                             <Google width={40} height={40} />
-                        </View>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </View>

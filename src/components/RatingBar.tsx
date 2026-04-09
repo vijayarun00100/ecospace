@@ -2,7 +2,12 @@ import React from "react";
 import { View, Text } from "react-native";
 import { Star } from "lucide-react-native";
 
-const RatingBar = ({ rating, percent }) => {
+interface RatingItemProps {
+    rating: number;
+    percent: number;
+}
+
+const RatingItem = ({ rating, percent }: RatingItemProps) => {
     return (
         <View
             style={{
@@ -12,9 +17,9 @@ const RatingBar = ({ rating, percent }) => {
             }}
         >
             {/* Left: Rating */}
-            <View style={{ flexDirection: "row", alignItems: "center", width: 40 }}>
-                <Text style={{ fontSize: 14 }}>{rating}</Text>
-                <Star size={14} fill="#000" color="#000" />
+            <View style={{ flexDirection: "row", alignItems: "center", width: 30 }}>
+                <Text style={{ fontSize: 13, marginRight: 4 }}>{rating}</Text>
+                <Star size={12} fill="#666" color="#666" />
             </View>
 
             {/* Middle: Progress Bar */}
@@ -22,8 +27,8 @@ const RatingBar = ({ rating, percent }) => {
                 style={{
                     flex: 1,
                     height: 6,
-                    backgroundColor: "#D3D3D3",
-                    borderRadius: 5,
+                    backgroundColor: "#EEE",
+                    borderRadius: 3,
                     marginHorizontal: 10,
                     overflow: "hidden",
                 }}
@@ -38,26 +43,32 @@ const RatingBar = ({ rating, percent }) => {
             </View>
 
             {/* Right: Percentage */}
-            <Text style={{ width: 40, textAlign: "right" }}>
-                {percent}%
+            <Text style={{ width: 35, textAlign: "right", fontSize: 12, color: '#888' }}>
+                {Math.round(percent)}%
             </Text>
         </View>
     );
 };
 
-const RatingDistribution = () => {
-    const data = [
-        { rating: 5, percent: 66 },
-        { rating: 4, percent: 23 },
-        { rating: 3, percent: 7 },
-        { rating: 2, percent: 2 },
-        { rating: 1, percent: 1 },
+interface RatingDistributionProps {
+    data?: { rating: number; percent: number }[];
+}
+
+const RatingDistribution = ({ data }: RatingDistributionProps) => {
+    const defaultData = [
+        { rating: 5, percent: 70 },
+        { rating: 4, percent: 20 },
+        { rating: 3, percent: 5 },
+        { rating: 2, percent: 3 },
+        { rating: 1, percent: 2 },
     ];
 
+    const displayData = data || defaultData;
+
     return (
-        <View style={{ marginHorizontal: 20 }}>
-            {data.map((item, index) => (
-                <RatingBar
+        <View style={{ width: '100%' }}>
+            {displayData.map((item, index) => (
+                <RatingItem
                     key={index}
                     rating={item.rating}
                     percent={item.percent}
@@ -67,4 +78,4 @@ const RatingDistribution = () => {
     );
 };
 
-export default RatingDistribution;
+export default RatingDistribution;
