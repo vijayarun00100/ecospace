@@ -17,6 +17,7 @@ import Details from "./src/onboarding/Details";
 import Interest from "./src/onboarding/Interest";
 import Welcome from "./src/onboarding/Welcome";
 import Posts from "./src/Home/Posts";
+import PostDetail from "./src/Home/PostDetail";
 import Article from "./src/Home/Article";
 import TopArticle from "./src/Home/TopArticle";
 import Trending from "./src/Home/Trending";
@@ -92,6 +93,7 @@ function Navigation() {
                 <Stack.Screen name="Cart" component={Cart} />
                 <Stack.Screen name="Payment" component={Payment} />
                 <Stack.Screen name="ChatScreen" component={ChatScreen} />
+                <Stack.Screen name="PostDetail" component={PostDetail} />
               </>
             )}
           </>

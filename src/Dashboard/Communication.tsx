@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, TextInput, Dimensions, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bell, Search, SquarePen, Check, CheckCheck, Settings, Image as ImageIcon, Mic, X } from 'lucide-react-native';
+import PageHeader from '../components/PageHeader';
 import { useNavigation } from '@react-navigation/native';
 import { chatAPI } from '../api/chat';
 import { getUploadUrl } from '../api/config';
@@ -37,8 +38,11 @@ const Communication = () => {
     }, []);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        const unsubscribe = navigation.addListener('focus', () => {
+            fetchData();
+        });
+        return unsubscribe;
+    }, [navigation, fetchData]);
 
     const getTimeAgo = (date: string) => {
         if (!date) return '';
@@ -71,35 +75,22 @@ const Communication = () => {
         setNewChatModal(false);
         setUserSearch('');
         setSearchResults([]);
-        navigation.navigate('ChatScreen', { chatId: null, user: selectedUser, newChat: true });
+        navigation.navigate('ChatScreen', { 
+            chatId: null, 
+            user: selectedUser, 
+            receiverId: selectedUser._id, 
+            newChat: true 
+        });
     };
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* Custom Header */}
-            <View style={styles.header}>
-                <Text style={styles.headerLogo}>ecospace</Text>
-                <View style={styles.headerRight}>
-                    <TouchableOpacity style={styles.headerIconButton}>
-                        <Bell color="#000" size={24} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.headerIconButton}>
-                        <Settings color="#000" size={24} />
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            {/* Search Bar Container */}
-            <View style={styles.searchSection}>
-                <View style={styles.searchBox}>
-                    <Search color="#BBB" size={24} />
-                    <TextInput 
-                        placeholder="Search chats..."
-                        placeholderTextColor="#BBB"
-                        style={styles.searchField}
-                    />
-                </View>
-            </View>
+            {/* Unified Header */}
+            <PageHeader 
+                showSettings={true} 
+                searchPlaceholder="Search chats..."
+                onSearchPress={() => {}} // Handle internal search if needed
+            />
 
             {/* Tabs Wrapper */}
             <View style={styles.tabsWrapper}>
@@ -208,19 +199,20 @@ const Communication = () => {
             {/* New Chat Modal */}
             <Modal visible={newChatModal} animationType="slide" transparent={true}>
                 <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-                    <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, height: '70%' }}>
+                    <View style={{ backgroundColor: 'white', borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 20, height: '70%' }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                             <Text style={{ fontSize: 20, fontWeight: '700' }}>New Chat</Text>
                             <TouchableOpacity onPress={() => { setNewChatModal(false); setUserSearch(''); setSearchResults([]); }}>
                                 <X size={26} color="#999" />
                             </TouchableOpacity>
                         </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F5', borderRadius: 20, paddingHorizontal: 14, marginBottom: 16 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFBE6', borderRadius: 20, paddingHorizontal: 14, marginBottom: 16 }}>
                             <Search size={18} color="#AAA" />
                             <TextInput
                                 style={{ flex: 1, marginLeft: 10, fontSize: 16, height: 44, color: '#141414' }}
                                 placeholder="Search for a user..."
                                 value={userSearch}
+                                 placeholderTextColor="black"
                                 onChangeText={handleUserSearch}
                                 autoFocus
                             />

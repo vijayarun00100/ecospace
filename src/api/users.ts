@@ -24,4 +24,7 @@ export const usersAPI = {
 
   search: (query: string) =>
     api.get(`/search?q=${encodeURIComponent(query)}&type=users`),
+
+  getBookmarks: () =>
+    api.get('/users/me/bookmarks'),
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Dimensions, Platform, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Dimensions, Platform, ActivityIndicator, RefreshControl, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Bell, Search, EllipsisVertical, Grid, FileText, ShoppingBag, Check, MessageCircle, UserPlus, UserMinus } from 'lucide-react-native';
+import { ChevronLeft, Bell, Search, EllipsisVertical, Grid, FileText, ShoppingBag, Check, MessageCircle, UserPlus, UserMinus, LogOut, Bookmark } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { usersAPI } from '../api/users';
 import { getUploadUrl } from '../api/config';
@@ -28,6 +28,7 @@ const Profile = () => {
   const [content, setContent] = useState<any[]>([]);
   const [isMe, setIsMe] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -72,6 +73,9 @@ const Profile = () => {
           } else if (tab === 'Products') {
               const res = await usersAPI.getUserProducts(uid);
               setContent(res.data.products || []);
+          } else if (tab === 'Bookmarks') {
+              const res = await usersAPI.getBookmarks();
+              setContent(res.data.all || []);
           } else {
               setContent([]);
           }
@@ -112,6 +116,7 @@ const Profile = () => {
   };
 
   const handleLogout = () => {
+      setMenuVisible(false);
       Alert.alert(
           "Logout",
           "Are you sure you want to log out of EcoSpace?",
@@ -120,6 +125,11 @@ const Profile = () => {
               { text: "Logout", style: "destructive", onPress: async () => await logout() }
           ]
       );
+  };
+
+  const handleShowBookmarks = () => {
+      setMenuVisible(false);
+      handleTabChange('Bookmarks');
   };
 
   if (loading && !refreshing) {
@@ -144,7 +154,6 @@ const Profile = () => {
   const displayStats = [
     { label: 'Posts', value: stats?.posts || 0 },
     { label: 'Articles', value: stats?.articles || 0 },
-    { label: 'Products', value: stats?.products || 0 },
     { label: 'Followers', value: stats?.followers || 0 },
     { label: 'Following', value: stats?.following || 0 },
   ];
@@ -179,7 +188,7 @@ const Profile = () => {
              </View>
           </TouchableOpacity>
           {isMe && (
-            <TouchableOpacity style={styles.iconButton} onPress={handleLogout}>
+            <TouchableOpacity style={styles.iconButton} onPress={() => setMenuVisible(true)}>
                 <EllipsisVertical color="#141414" size={26} />
             </TouchableOpacity>
           )}
@@ -288,7 +297,7 @@ const Profile = () => {
         {/* Tabs */}
         <View style={styles.tabsWrapper}>
             <View style={styles.tabsContainer}>
-            {['Posts', 'Articles', 'Products'].map((tab) => (
+            {['Posts', 'Articles', 'Products', ...(isMe ? ['Bookmarks'] : [])].map((tab) => (
                 <TouchableOpacity
                 key={tab}
                 onPress={() => handleTabChange(tab)}
@@ -298,6 +307,7 @@ const Profile = () => {
                     {tab === 'Posts' && <Grid size={24} color={activeTab === tab ? '#141414' : '#BBB'} />}
                     {tab === 'Articles' && <FileText size={24} color={activeTab === tab ? '#141414' : '#BBB'} />}
                     {tab === 'Products' && <ShoppingBag size={24} color={activeTab === tab ? '#141414' : '#BBB'} />}
+                    {tab === 'Bookmarks' && <Bookmark size={24} color={activeTab === tab ? '#141414' : '#BBB'} />}
                     <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
                 </View>
                 {activeTab === tab && <View style={styles.tabIndicator} />}
@@ -319,26 +329,65 @@ const Profile = () => {
                         style={styles.gridItem}
                         onPress={() => {
                             if (activeTab === 'Posts') {
-                                // navigation.navigate('PostDetail', { postId: item._id });
+                                navigation.navigate('PostDetail', { postId: item._id });
                             } else if (activeTab === 'Articles') {
-                                navigation.navigate('TopArticle', { article: item });
+                                navigation.navigate('TopArticle', { articleId: item._id });
                             } else if (activeTab === 'Products') {
                                 navigation.navigate('Product', { productId: item._id });
+                            } else if (activeTab === 'Bookmarks') {
+                                if (item.contentType === 'Article') {
+                                    navigation.navigate('TopArticle', { articleId: item._id });
+                                } else if (item.contentType === 'Post') {
+                                    navigation.navigate('PostDetail', { postId: item._id });
+                                }
                             }
                         }}
                     >
                     <Image 
                         source={{ 
-                            uri: (activeTab === 'Articles' ? getUploadUrl(item.image) : getUploadUrl(item.images?.[0])) || 
+                            uri: (activeTab === 'Articles' || (activeTab === 'Bookmarks' && item.contentType === 'Article') ? getUploadUrl(item.image || item.images?.[0]) : getUploadUrl(item.images?.[0])) || 
                                  'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=400' 
                         }} 
                         style={styles.gridImage} 
+                        resizeMode="cover"
                     />
                     </TouchableOpacity>
               ))
           )}
         </View>
       </ScrollView>
+
+      {/* Menu Modal */}
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setMenuVisible(false)}
+        >
+          <View style={styles.menuContent}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleShowBookmarks}>
+              <View style={styles.menuItemIcon}>
+                <Bookmark size={20} color="#141414" />
+              </View>
+              <Text style={styles.menuText}>Bookmarks</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.menuDivider} />
+            
+            <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+              <View style={styles.menuItemIcon}>
+                <LogOut size={20} color="#E91E63" />
+              </View>
+              <Text style={[styles.menuText, { color: '#E91E63' }]}>Log Out</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -456,12 +505,12 @@ const styles = StyleSheet.create({
   statsRowBackground: {
     backgroundColor: '#D4E4FF', 
     marginTop: 25,
-    paddingVertical: 18,
+    paddingVertical: 10,
   },
   statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 10,
+    justifyContent: 'space-between',
+    paddingHorizontal: 40,
   },
   statItem: {
     alignItems: 'center',
@@ -546,6 +595,7 @@ const styles = StyleSheet.create({
       borderBottomWidth: 1,
       borderBottomColor: '#EEE',
       marginTop: 20,
+      marginBottom:20
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -582,16 +632,58 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     padding: 1,
+    marginBottom:20,
   },
   gridItem: {
-    width: width / 3 - 2,
-    height: width / 3 - 2,
+    width: width / 3 - 1,
+    height: (width / 3) * (5 / 4),
     margin: 1,
+    marginLeft:3
   },
   gridImage: {
     width: '100%',
     height: '100%',
     borderRadius: 4,
+  },
+  // Modal & Menu Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuContent: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    width: width * 0.7,
+    padding: 10,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+
+  },
+  menuItemIcon: {
+    width: 40,
+    alignItems: 'center',
+  },
+  menuText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#141414',
+    marginLeft: 10,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#EEE',
+    marginHorizontal: 15,
   },
 });
 

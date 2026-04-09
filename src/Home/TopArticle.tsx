@@ -27,9 +27,9 @@ interface ArticleData {
 }
 
 function TopArticle({ navigation, route }: any) {
-    const { articleId } = route.params || {};
+    const { articleId, article: passedArticle } = route.params || {};
     const { user } = useAuth();
-    const [article, setArticle] = useState<ArticleData | null>(null);
+    const [article, setArticle] = useState<ArticleData | null>(passedArticle || null);
     const [related, setRelated] = useState<ArticleData[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -56,7 +56,10 @@ function TopArticle({ navigation, route }: any) {
             }
         } catch (err) {
             console.error("Error fetching article details:", err);
-            Alert.alert("Error", "Failed to load article details");
+            // Don't alert if we already have passedArticle
+            if (!passedArticle) {
+                Alert.alert("Error", "Failed to load article details");
+            }
         } finally {
             setLoading(false);
         }
@@ -115,7 +118,7 @@ function TopArticle({ navigation, route }: any) {
         return `${days}d ago`;
     };
 
-    if (loading) {
+    if (loading && !article) {
         return (
             <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: '#FFFBE6' }}>
                 <ActivityIndicator size="large" color="#4F9A42" />
@@ -134,9 +137,9 @@ function TopArticle({ navigation, route }: any) {
         );
     }
 
-    const isLiked = article.likes.includes(user?._id || "");
-    const isDisliked = article.dislikes.includes(user?._id || "");
-    const isBookmarked = article.bookmarks.includes(user?._id || "");
+    const isLiked = (article.likes || []).includes(user?._id || "");
+    const isDisliked = (article.dislikes || []).includes(user?._id || "");
+    const isBookmarked = (article.bookmarks || []).includes(user?._id || "");
 
     return (
         <SafeAreaView style={{ flex: 1, marginTop: 10, }} edges={['top', 'left', 'right']}>
@@ -159,10 +162,10 @@ function TopArticle({ navigation, route }: any) {
                 <View style={{ marginTop: 8, alignItems: "center" }}>
                     <View style={{ height: 150, width: 220, borderRadius: 30, alignItems: "center", justifyContent: "center", }}>
                         <View style={{ width: 80, height: 80 }}>
-                            <Image source={{ uri: getUploadUrl(article.author.avatar) }} resizeMode="cover" style={{ width: "100%", height: "100%", borderRadius: 40, borderWidth: 3, borderColor: '#4F9A42' }} />
+                            <Image source={{ uri: getUploadUrl(article.author?.avatar) }} resizeMode="cover" style={{ width: "100%", height: "100%", borderRadius: 40, borderWidth: 3, borderColor: '#4F9A42' }} />
                         </View>
                         <View style={{ marginTop: 10 }}>
-                            <Text style={{ fontWeight: "600", fontSize: 20, letterSpacing: 1 }}>{article.author.name}</Text>
+                            <Text style={{ fontWeight: "600", fontSize: 20, letterSpacing: 1 }}>{article.author?.name || 'Anonymous'}</Text>
                         </View>
                     </View>
                     <View>
@@ -203,7 +206,7 @@ function TopArticle({ navigation, route }: any) {
                             </View>
                         </View>
                     </View>
-                    <BlogContent text={article.content} image={{ uri: getUploadUrl(article.images[0]) }} />
+                    <BlogContent text={article.content} image={article.images?.[0] ? { uri: getUploadUrl(article.images[0]) } : undefined} />
                 </View>
                 <View style={{ flexDirection: "row", marginTop: 15, marginHorizontal: 30 }}>
                     <TouchableOpacity onPress={handleLike} style={{ marginRight: 15, padding: 12, borderRadius: 90, backgroundColor: isLiked ? "#E91E63" : "#5584EE" }}>

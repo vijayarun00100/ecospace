@@ -140,4 +140,26 @@ router.get('/:id/products', async (req, res) => {
   }
 });
 
+// GET /api/users/me/bookmarks
+router.get('/me/bookmarks', auth, async (req, res) => {
+  console.log(`[Bookmarks] User ${req.userId} requested bookmarks`);
+  try {
+    const [posts, articles] = await Promise.all([
+      Post.find({ bookmarks: req.userId }).populate('author', 'name avatar').lean(),
+      Article.find({ bookmarks: req.userId }).populate('author', 'name avatar').lean()
+    ]);
+
+    const all = [
+      ...posts.map(p => ({ ...p, contentType: 'Post' })),
+      ...articles.map(a => ({ ...a, contentType: 'Article' }))
+    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    console.log(`[Bookmarks] Success: ${posts.length} posts, ${articles.length} articles`);
+    res.json({ posts, articles, all });
+  } catch (err) {
+    console.error(`[Bookmarks] Error:`, err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

@@ -11,6 +11,7 @@ import Trending from '../Home/Trending';
 import TopArticle from '../Home/TopArticle';
 import Search from '../Home/Search';
 import Explore from '../Home/Explore';
+import PostDetail from '../Home/PostDetail';
 import EcoStarter from '../Dashboard/EcoStarter';
 import History from '../Dashboard/History';
 import Challenge from '../Dashboard/Challenge';
@@ -35,6 +36,7 @@ const HomeStack = () => (
     <Stack.Screen name="TopArticle" component={TopArticle} />
     <Stack.Screen name="Search" component={Search} />
     <Stack.Screen name="Explore" component={Explore} />
+    <Stack.Screen name="PostDetail" component={PostDetail} />
   </Stack.Navigator>
 );
 

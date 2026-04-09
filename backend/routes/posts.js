@@ -176,4 +176,29 @@ router.get('/search', async (req, res) => {
   }
 });
 
+// GET /api/posts/:id
+router.get('/:id', optionalAuth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id)
+      .populate('author', 'name avatar')
+      .populate('comments.user', 'name avatar');
+    
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+
+    const p = post.toObject();
+    if (req.userId) {
+      p.isLiked = post.likes.some((id) => id.toString() === req.userId.toString());
+      p.isDisliked = post.dislikes.some((id) => id.toString() === req.userId.toString());
+      p.isBookmarked = post.bookmarks.some((id) => id.toString() === req.userId.toString());
+    }
+    p.likeCount = post.likes.length;
+    p.dislikeCount = post.dislikes.length;
+    p.commentCount = post.comments.length;
+
+    res.json({ post: p });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

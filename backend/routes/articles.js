@@ -98,4 +98,73 @@ router.get('/search', async (req, res) => {
   }
 });
 
+// POST /api/articles/:id/like
+router.post('/:id/like', auth, async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+
+    const isLiked = article.likes.includes(req.userId);
+    if (isLiked) {
+      article.likes = article.likes.filter((id) => id.toString() !== req.userId.toString());
+    } else {
+      article.likes.push(req.userId);
+      article.dislikes = article.dislikes.filter((id) => id.toString() !== req.userId.toString());
+    }
+    await article.save();
+    res.json({ likes: article.likes, dislikes: article.dislikes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/articles/:id/dislike
+router.post('/:id/dislike', auth, async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+
+    const isDisliked = article.dislikes.includes(req.userId);
+    if (isDisliked) {
+      article.dislikes = article.dislikes.filter((id) => id.toString() !== req.userId.toString());
+    } else {
+      article.dislikes.push(req.userId);
+      article.likes = article.likes.filter((id) => id.toString() !== req.userId.toString());
+    }
+    await article.save();
+    res.json({ likes: article.likes, dislikes: article.dislikes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/articles/:id/bookmark
+router.post('/:id/bookmark', auth, async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+
+    const isBookmarked = article.bookmarks.includes(req.userId);
+    if (isBookmarked) {
+      article.bookmarks = article.bookmarks.filter((id) => id.toString() !== req.userId.toString());
+    } else {
+      article.bookmarks.push(req.userId);
+    }
+    await article.save();
+    res.json({ bookmarks: article.bookmarks });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/articles/:id/share
+router.post('/:id/share', auth, async (req, res) => {
+  try {
+    const article = await Article.findByIdAndUpdate(req.params.id, { $inc: { shares: 1 } }, { new: true });
+    res.json({ shares: article.shares });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

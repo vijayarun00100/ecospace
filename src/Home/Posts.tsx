@@ -299,7 +299,7 @@ function Posts({ navigation }: any) {
                     {tip && (
                         <View style={{ borderWidth: 2, borderColor: "#4F9A42", marginHorizontal: 20, minHeight: 120, borderRadius: 20, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 20, paddingVertical: 15 }}>
                             <View>
-                                <Image source={TipIcon} style={{ width: 60, height: 60, borderRadius: 10 }} resizeMode="contain" />
+                                <Image source={TipIcon} style={{ width: 120, height: 120, borderRadius: 10 }} resizeMode="stretch" />
                             </View>
                             <View style={{ flexDirection: "column", marginLeft: 20, flex: 1 }}>
                                 <Text style={{ color: "#4F9A42", fontWeight: "600", fontSize: 22 }}>Tip of the day !</Text>

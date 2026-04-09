@@ -24,9 +24,10 @@ router.post('/', auth, async (req, res) => {
     }
     
     const other = chat.participants.find(
-      (p) => p._id.toString() !== req.userId.toString()
+      (p) => p._id && p._id.toString() !== req.userId.toString()
     );
     
+    console.log(`Returning chat: ${chat._id}, otherUser: ${other?.name || 'unknown'}`);
     res.status(200).json({ chat: { _id: chat._id, user: other } });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -69,7 +70,11 @@ router.get('/:id/messages', auth, async (req, res) => {
     const chat = await Chat.findById(req.params.id)
       .populate('messages.sender', 'name avatar')
       .populate('participants', 'name avatar');
-    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+    
+    if (!chat) {
+        console.warn(`Chat not found for ID: ${req.params.id}`);
+        return res.status(404).json({ error: 'Chat not found' });
+    }
 
     // Mark messages as read
     chat.messages.forEach((msg) => {

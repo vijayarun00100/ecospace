@@ -24,4 +24,7 @@ export const postsAPI = {
 
   search: (q: string) =>
     api.get(`/posts/search?q=${encodeURIComponent(q)}`),
+
+  getById: (id: string) =>
+    api.get(`/posts/${id}`),
 };

@@ -34,7 +34,12 @@ const ChatScreen = () => {
     const scrollRef = useRef<ScrollView>(null);
 
     const fetchMessages = useCallback(async (id: string) => {
+        if (!id || id === 'null' || id === 'undefined') {
+            console.error('Invalid ID passed to fetchMessages:', id);
+            return;
+        }
         try {
+            console.log('Fetching messages for:', id);
             const res = await chatAPI.getMessages(id);
             setMessages(res.data.messages || []);
             if (res.data.participants) {
@@ -51,21 +56,26 @@ const ChatScreen = () => {
     useEffect(() => {
         const initChat = async () => {
             setError(null);
-            console.log('Initializing Chat Screen with params:', { chatId, receiverId, receiverName });
+            console.log('Initializing Chat Screen with params:', { chatId, receiverId });
             
             if (chatId) {
                 await fetchMessages(chatId);
-            } else if (receiverId) {
+            } else if (receiverId || otherUser?._id) {
                 try {
-                    const res = await chatAPI.create(receiverId);
+                    const targetId = (receiverId || otherUser?._id) as string;
+                    console.log('Creating/Getting chat for receiver:', targetId);
+                    const res = await chatAPI.create(targetId);
                     const newChatId = res.data.chat?._id;
+                    
                     if (!newChatId) throw new Error("Chat creation failed (no ID returned)");
                     
+                    console.log('Chat initialized successfully:', newChatId);
                     setCurrentChatId(newChatId);
                     setChatBuddy(res.data.chat.user);
                     setLoading(false);
                     await fetchMessages(newChatId);
                 } catch (err: any) {
+                    console.error('Init chat logic error:', err);
                     setError(err.response?.data?.error || err.message || "Failed to initialize chat");
                     setLoading(false);
                 }

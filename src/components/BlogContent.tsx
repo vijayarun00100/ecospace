@@ -9,7 +9,7 @@ interface BlogContentProps{
 function BlogContent({text,image} : BlogContentProps){
     const paragraphs = text?.split(/\s{2,}/) ?? [];
     return(
-        <SafeAreaView style={{flex:1}}>
+        <View style={{flex:1}}>
             <View style={{marginHorizontal:30 , marginBottom:50}}>
                 <Text style={{color:"#141414" ,fontWeight:600 , fontSize:20 , marginBottom:15}}>
                     Impact of recycling
@@ -26,7 +26,7 @@ function BlogContent({text,image} : BlogContentProps){
                     </View>
                 )}
             </View>
-        </SafeAreaView>
+        </View>
     );
 }
 

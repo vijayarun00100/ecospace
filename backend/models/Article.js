@@ -9,6 +9,8 @@ const articleSchema = new mongoose.Schema({
   hashtags: [{ type: String }],
   readingTime: { type: Number, default: 5 },
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  dislikes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   comments: [{
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     text: { type: String },
