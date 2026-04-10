@@ -1,20 +1,22 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { 
-    View, 
-    Text, 
-    Image, 
-    TouchableOpacity, 
-    ScrollView, 
-    StyleSheet, 
-    ActivityIndicator, 
-    SafeAreaView, 
-    TextInput, 
-    KeyboardAvoidingView, 
+import {
+    View,
+    Text,
+    Image,
+    TouchableOpacity,
+    ScrollView,
+    StyleSheet,
+    ActivityIndicator,
+    TextInput,
+    KeyboardAvoidingView,
     Platform,
     Share,
     ImageBackground,
     Alert
 } from "react-native";
+import Toast from 'react-native-toast-message';
+
+import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Heart, ThumbsDown, MessageCircleMore, Send, Bookmark } from 'lucide-react-native';
 import { postsAPI } from "../api/posts";
 import { getUploadUrl } from "../api/config";
@@ -34,7 +36,11 @@ const PostDetail = ({ route, navigation }: any) => {
             setPost(res.data.post);
         } catch (err) {
             console.error("Fetch post detail error:", err);
-            Alert.alert("Error", "Could not load post.");
+            Toast.show({
+                type: 'error',
+                text1: 'Post Error',
+                text2: 'Could not load post details.'
+            });
             navigation.goBack();
         } finally {
             setLoading(false);
@@ -53,7 +59,7 @@ const PostDetail = ({ route, navigation }: any) => {
                 const userId = user?._id || "";
                 if (res.data.isLiked && !newLikes.includes(userId)) newLikes.push(userId);
                 else if (!res.data.isLiked) newLikes = newLikes.filter(id => id !== userId);
-                
+
                 let newDislikes = [...(prev.dislikes || [])];
                 if (res.data.isLiked) newDislikes = newDislikes.filter(id => id !== userId);
 
@@ -72,7 +78,7 @@ const PostDetail = ({ route, navigation }: any) => {
                 const userId = user?._id || "";
                 if (res.data.isDisliked && !newDislikes.includes(userId)) newDislikes.push(userId);
                 else if (!res.data.isDisliked) newDislikes = newDislikes.filter(id => id !== userId);
-                
+
                 let newLikes = [...(prev.likes || [])];
                 if (res.data.isDisliked) newLikes = newLikes.filter(id => id !== userId);
 
@@ -93,6 +99,12 @@ const PostDetail = ({ route, navigation }: any) => {
                 else if (!res.data.isBookmarked) newBookmarks = newBookmarks.filter(id => id !== userId);
 
                 return { ...prev, bookmarks: newBookmarks };
+            });
+            Toast.show({
+                type: 'success',
+                text1: 'Saved',
+                text2: res.data.isBookmarked ? 'Added to your bookmarks' : 'Removed from bookmarks',
+                position: 'bottom'
             });
         } catch (err) {
             console.error("Bookmark error:", err);
@@ -140,120 +152,122 @@ const PostDetail = ({ route, navigation }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ChevronLeft color="#141414" size={28} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Post</Text>
-                <View style={{ width: 40 }} />
-            </View>
-
-            <ScrollView 
-                contentContainerStyle={styles.scrollContent} 
-                showsVerticalScrollIndicator={false}
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
             >
-                {/* Post Content */}
-                <View style={styles.postCard}>
-                    <View style={styles.postMedia}>
-                        <ImageBackground
-                            source={{ uri: getUploadUrl(post.images[0]) }}
-                            style={styles.postImage}
-                            imageStyle={{ borderRadius: 20 }}
-                        >
-                            <LinearGradient
-                                colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.6)']}
-                                style={styles.gradientOverlay}
-                            >
-                                <TouchableOpacity 
-                                    onPress={() => navigation.navigate('Profile', { userId: post.author._id })}
-                                    style={styles.authorInfo}
-                                >
-                                    <Image
-                                        source={{ uri: getUploadUrl(post.author.avatar) }}
-                                        style={styles.authorAvatar}
-                                    />
-                                    <View style={styles.authorText}>
-                                        <Text style={styles.authorName}>{post.author.name}</Text>
-                                        <Text style={styles.postTime}>
-                                            {new Date(post.createdAt).toLocaleDateString()}
-                                        </Text>
-                                    </View>
-                                </TouchableOpacity>
-                            </LinearGradient>
-                        </ImageBackground>
-                    </View>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <ChevronLeft color="#141414" size={28} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Post</Text>
+                    <View style={{ width: 40 }} />
+                </View>
 
-                    <View style={styles.actionsBar}>
-                        <View style={styles.leftActions}>
-                            <TouchableOpacity onPress={handleLike} style={styles.actionItem}>
-                                <Heart size={28} color={isLiked ? "#E91E63" : "#444"} fill={isLiked ? "#E91E63" : "none"} />
-                                <Text style={styles.actionCount}>{post.likes?.length || 0}</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={handleDislike} style={styles.actionItem}>
-                                <ThumbsDown size={28} color={isDisliked ? "#FB8C00" : "#444"} fill={isDisliked ? "#FB8C00" : "none"} />
-                                <Text style={styles.actionCount}>{post.dislikes?.length || 0}</Text>
-                            </TouchableOpacity>
-                            <View style={styles.actionItem}>
-                                <MessageCircleMore size={28} color="#444" />
-                                <Text style={styles.actionCount}>{post.comments?.length || 0}</Text>
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* Post Content */}
+                    <View style={styles.postCard}>
+                        <View style={styles.postMedia}>
+                            <ImageBackground
+                                source={{ uri: getUploadUrl(post.images[0]) }}
+                                style={styles.postImage}
+                                imageStyle={{ borderRadius: 20 }}
+                            >
+                                <LinearGradient
+                                    colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.6)']}
+                                    style={styles.gradientOverlay}
+                                >
+                                    <TouchableOpacity
+                                        onPress={() => navigation.navigate('Profile', { userId: post.author._id })}
+                                        style={styles.authorInfo}
+                                    >
+                                        <Image
+                                            source={{ uri: getUploadUrl(post.author.avatar) }}
+                                            style={styles.authorAvatar}
+                                        />
+                                        <View style={styles.authorText}>
+                                            <Text style={styles.authorName}>{post.author.name}</Text>
+                                            <Text style={styles.postTime}>
+                                                {new Date(post.createdAt).toLocaleDateString()}
+                                            </Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                </LinearGradient>
+                            </ImageBackground>
+                        </View>
+
+                        <View style={styles.actionsBar}>
+                            <View style={styles.leftActions}>
+                                <TouchableOpacity onPress={handleLike} style={styles.actionItem}>
+                                    <Heart size={28} color={isLiked ? "#E91E63" : "#444"} fill={isLiked ? "#E91E63" : "none"} />
+                                    <Text style={styles.actionCount}>{post.likes?.length || 0}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={handleDislike} style={styles.actionItem}>
+                                    <ThumbsDown size={28} color={isDisliked ? "#FB8C00" : "#444"} fill={isDisliked ? "#FB8C00" : "none"} />
+                                    <Text style={styles.actionCount}>{post.dislikes?.length || 0}</Text>
+                                </TouchableOpacity>
+                                <View style={styles.actionItem}>
+                                    <MessageCircleMore size={28} color="#444" />
+                                    <Text style={styles.actionCount}>{post.comments?.length || 0}</Text>
+                                </View>
+                                <TouchableOpacity onPress={handleShare} style={styles.actionItem}>
+                                    <Send size={28} color="#444" />
+                                </TouchableOpacity>
                             </View>
-                            <TouchableOpacity onPress={handleShare} style={styles.actionItem}>
-                                <Send size={28} color="#444" />
+                            <TouchableOpacity onPress={handleBookmark}>
+                                <Bookmark size={28} color={isBookmarked ? "#2E7D32" : "#444"} fill={isBookmarked ? "#2E7D32" : "none"} />
                             </TouchableOpacity>
                         </View>
-                        <TouchableOpacity onPress={handleBookmark}>
-                            <Bookmark size={28} color={isBookmarked ? "#2E7D32" : "#444"} fill={isBookmarked ? "#2E7D32" : "none"} />
-                        </TouchableOpacity>
+
+                        <View style={styles.captionContainer}>
+                            <Text style={styles.captionText}>
+                                <Text style={styles.captionAuthor}>{post.author.name} </Text>
+                                {post.caption}
+                            </Text>
+                            {post.hashtags?.length > 0 && (
+                                <Text style={styles.hashtags}>
+                                    {post.hashtags.map((h: string) => `#${h} `)}
+                                </Text>
+                            )}
+                        </View>
                     </View>
 
-                    <View style={styles.captionContainer}>
-                        <Text style={styles.captionText}>
-                            <Text style={styles.captionAuthor}>{post.author.name} </Text>
-                            {post.caption}
-                        </Text>
-                        {post.hashtags?.length > 0 && (
-                            <Text style={styles.hashtags}>
-                                {post.hashtags.map((h: string) => `#${h} `)}
-                            </Text>
+                    {/* Comments Section */}
+                    <View style={styles.commentsSection}>
+                        <Text style={styles.sectionTitle}>Comments</Text>
+                        {post.comments?.map((comment: any, index: number) => (
+                            <View key={index} style={styles.commentItem}>
+                                <Image
+                                    source={{ uri: comment.user?.avatar ? getUploadUrl(comment.user.avatar) : 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=40' }}
+                                    style={styles.commentAvatar}
+                                />
+                                <View style={styles.commentBubble}>
+                                    <Text style={styles.commentUser}>{comment.user?.name || "User"}</Text>
+                                    <Text style={styles.commentText}>{comment.text}</Text>
+                                </View>
+                            </View>
+                        ))}
+                        {post.comments?.length === 0 && (
+                            <Text style={styles.noComments}>No comments yet.</Text>
                         )}
                     </View>
-                </View>
+                </ScrollView>
 
-                {/* Comments Section */}
-                <View style={styles.commentsSection}>
-                    <Text style={styles.sectionTitle}>Comments</Text>
-                    {post.comments?.map((comment: any, index: number) => (
-                        <View key={index} style={styles.commentItem}>
-                            <Image 
-                                source={{ uri: comment.user?.avatar ? getUploadUrl(comment.user.avatar) : 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=40' }} 
-                                style={styles.commentAvatar} 
-                            />
-                            <View style={styles.commentBubble}>
-                                <Text style={styles.commentUser}>{comment.user?.name || "User"}</Text>
-                                <Text style={styles.commentText}>{comment.text}</Text>
-                            </View>
-                        </View>
-                    ))}
-                    {post.comments?.length === 0 && (
-                        <Text style={styles.noComments}>No comments yet.</Text>
-                    )}
-                </View>
-            </ScrollView>
-
-            <KeyboardAvoidingView 
-                behavior={Platform.OS === "ios" ? "padding" : "height"} 
-                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-            >
                 <View style={styles.inputContainer}>
                     <TextInput
                         value={commentText}
                         onChangeText={setCommentText}
                         placeholder="Add a comment..."
                         style={styles.commentInput}
+                        placeholderTextColor={"black"}
                         multiline
                     />
-                    <TouchableOpacity 
-                        onPress={handleCommentSubmit} 
+                    <TouchableOpacity
+                        onPress={handleCommentSubmit}
                         style={styles.postButton}
                         disabled={!commentText.trim()}
                     >

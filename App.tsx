@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { CartProvider } from "./src/context/CartContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from '@react-navigation/native';
+import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import SplashScreen from "./src/onboarding/SplashScreen";
@@ -37,7 +38,28 @@ import Product from "./src/Product/Product";
 import Cart from "./src/Product/Cart";
 import Payment from "./src/Product/Payment";
 import ChatScreen from "./src/Dashboard/ChatScreen";
+import EditProfile from "./src/Profile/EditProfile";
 import BottomTabNavigator from "./src/components/BottomTabNavigator";
+
+const toastConfig = {
+  success: (props: any) => (
+    <BaseToast
+      {...props}
+      style={{ borderLeftColor: '#4F9A42', backgroundColor: '#FFF', height: 70, borderRadius: 12, borderLeftWidth: 8 }}
+      contentContainerStyle={{ paddingHorizontal: 15 }}
+      text1Style={{ fontSize: 16, fontWeight: '700', color: '#141414' }}
+      text2Style={{ fontSize: 13, color: '#666' }}
+    />
+  ),
+  error: (props: any) => (
+    <ErrorToast
+      {...props}
+      style={{ borderLeftColor: '#E91E63', backgroundColor: '#FFF', height: 70, borderRadius: 12, borderLeftWidth: 8 }}
+      text1Style={{ fontSize: 16, fontWeight: '700', color: '#141414' }}
+      text2Style={{ fontSize: 13, color: '#666' }}
+    />
+  )
+};
 
 const Stack = createNativeStackNavigator();
 
@@ -93,6 +115,7 @@ function Navigation() {
                 <Stack.Screen name="Cart" component={Cart} />
                 <Stack.Screen name="Payment" component={Payment} />
                 <Stack.Screen name="ChatScreen" component={ChatScreen} />
+                <Stack.Screen name="EditProfile" component={EditProfile} />
                 <Stack.Screen name="PostDetail" component={PostDetail} />
               </>
             )}
@@ -113,6 +136,7 @@ export default function App() {
           </View>
         </SafeAreaProvider>
       </CartProvider>
+      <Toast config={toastConfig} />
     </AuthProvider>
   );
 }

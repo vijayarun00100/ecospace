@@ -4,9 +4,9 @@ import { Platform } from 'react-native';
 
 // Connecting physical device via USB ADB Reverse Tunnel
 const BASE_URL = Platform.select({
-  android: 'https://ddec-2401-4900-4df7-989b-cc4e-3869-fe03-df9b.ngrok-free.app',
-  ios: 'https://ddec-2401-4900-4df7-989b-cc4e-3869-fe03-df9b.ngrok-free.app',
-  default: 'https://ddec-2401-4900-4df7-989b-cc4e-3869-fe03-df9b.ngrok-free.app',
+  android: 'https://4e76-27-4-136-34.ngrok-free.app',
+  ios: 'https://4e76-27-4-136-34.ngrok-free.app',
+  default: 'https://4e76-27-4-136-34.ngrok-free.app',
 });
 
 const api: AxiosInstance = axios.create({

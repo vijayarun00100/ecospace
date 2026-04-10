@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Dimensions, Platform, ActivityIndicator, RefreshControl, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Dimensions, Platform, ActivityIndicator, RefreshControl, Alert, Modal, Share } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Bell, Search, EllipsisVertical, Grid, FileText, ShoppingBag, Check, MessageCircle, UserPlus, UserMinus, LogOut, Bookmark } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -28,7 +29,7 @@ const Profile = () => {
   const [content, setContent] = useState<any[]>([]);
   const [isMe, setIsMe] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -109,27 +110,43 @@ const Profile = () => {
           setStats((prev: any) => ({
               ...prev,
               followers: res.data.following ? prev.followers + 1 : prev.followers - 1
-          }));
-      } catch (err) {
-          Alert.alert("Error", "Could not update follow status.");
-      }
-  };
+            }));
+            Toast.show({
+                type: 'success',
+                text1: res.data.following ? 'Following' : 'Unfollowed',
+                text2: res.data.following ? `You are now following ${profile.name}` : `Unfollowed ${profile.name}`
+            });
+        } catch (err) {
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Could not update follow status.'
+            });
+        }
+    };
 
   const handleLogout = () => {
-      setMenuVisible(false);
-      Alert.alert(
-          "Logout",
-          "Are you sure you want to log out of EcoSpace?",
-          [
-              { text: "Cancel", style: "cancel" },
-              { text: "Logout", style: "destructive", onPress: async () => await logout() }
-          ]
-      );
+      setLogoutModalVisible(true);
   };
 
-  const handleShowBookmarks = () => {
-      setMenuVisible(false);
-      handleTabChange('Bookmarks');
+  const handleShareProfile = async () => {
+    try {
+        await Share.share({
+            message: `Check out ${profile.name}'s profile on EcoSpace! Join us in our journey towards sustainability.`,
+        });
+    } catch (error: any) {
+        Toast.show({ type: 'error', text1: 'Sharing Failed', text2: error.message });
+    }
+  };
+
+  const confirmLogout = async () => {
+      setLogoutModalVisible(false);
+      await logout();
+      Toast.show({
+          type: 'success',
+          text1: 'Logged Out',
+          text2: 'Goodbye! See you soon.'
+      });
   };
 
   if (loading && !refreshing) {
@@ -180,7 +197,7 @@ const Profile = () => {
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.iconButton} 
-            onPress={() => isMe ? navigation.navigate('Chat') : navigation.navigate('ChatScreen', { receiverId: profile._id, receiverName: profile.name })}
+            onPress={() => isMe ? navigation.navigate('Dashboard', { screen: 'Communication' }) : navigation.navigate('ChatScreen', { receiverId: profile._id, receiverName: profile.name })}
           >
              <View style={styles.chatIconWrapper}>
                 <MessageCircle color="#141414" size={26} />
@@ -188,8 +205,8 @@ const Profile = () => {
              </View>
           </TouchableOpacity>
           {isMe && (
-            <TouchableOpacity style={styles.iconButton} onPress={() => setMenuVisible(true)}>
-                <EllipsisVertical color="#141414" size={26} />
+            <TouchableOpacity style={styles.iconButton} onPress={handleLogout}>
+                <LogOut color="#E91E63" size={26} />
             </TouchableOpacity>
           )}
         </View>
@@ -289,7 +306,7 @@ const Profile = () => {
                 <Text style={styles.outlinedBtnText}>Message</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.outlinedBtn}>
+          <TouchableOpacity style={styles.outlinedBtn} onPress={handleShareProfile}>
             <Text style={styles.outlinedBtnText}>Share Profile</Text>
           </TouchableOpacity>
         </View>
@@ -345,8 +362,7 @@ const Profile = () => {
                     >
                     <Image 
                         source={{ 
-                            uri: (activeTab === 'Articles' || (activeTab === 'Bookmarks' && item.contentType === 'Article') ? getUploadUrl(item.image || item.images?.[0]) : getUploadUrl(item.images?.[0])) || 
-                                 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=400' 
+                            uri: (activeTab === 'Articles' || (activeTab === 'Bookmarks' && item.contentType === 'Article') ? getUploadUrl(item.image || item.images?.[0]) : getUploadUrl(item.images?.[0]))
                         }} 
                         style={styles.gridImage} 
                         resizeMode="cover"
@@ -357,36 +373,37 @@ const Profile = () => {
         </View>
       </ScrollView>
 
-      {/* Menu Modal */}
+      {/* Custom Logout Modal */}
       <Modal
-        visible={menuVisible}
+        visible={logoutModalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setMenuVisible(false)}
+        onRequestClose={() => setLogoutModalVisible(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setMenuVisible(false)}
-        >
-          <View style={styles.menuContent}>
-            <TouchableOpacity style={styles.menuItem} onPress={handleShowBookmarks}>
-              <View style={styles.menuItemIcon}>
-                <Bookmark size={20} color="#141414" />
-              </View>
-              <Text style={styles.menuText}>Bookmarks</Text>
-            </TouchableOpacity>
+        <View style={styles.modalOverlay}>
+          <View style={styles.logoutModalContent}>
+            <View style={styles.logoutIconCircle}>
+                <LogOut size={32} color="#E91E63" />
+            </View>
+            <Text style={styles.logoutTitle}>Logout</Text>
+            <Text style={styles.logoutSubtitle}>Are you sure you want to log out of EcoSpace? We'll miss you!</Text>
             
-            <View style={styles.menuDivider} />
-            
-            <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-              <View style={styles.menuItemIcon}>
-                <LogOut size={20} color="#E91E63" />
-              </View>
-              <Text style={[styles.menuText, { color: '#E91E63' }]}>Log Out</Text>
-            </TouchableOpacity>
+            <View style={styles.logoutActions}>
+                <TouchableOpacity 
+                    style={styles.cancelLogoutBtn} 
+                    onPress={() => setLogoutModalVisible(false)}
+                >
+                    <Text style={styles.cancelLogoutText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={styles.confirmLogoutBtn} 
+                    onPress={confirmLogout}
+                >
+                    <Text style={styles.confirmLogoutText}>Logout</Text>
+                </TouchableOpacity>
+            </View>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -651,6 +668,74 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  logoutModalContent: {
+    backgroundColor: '#FFF',
+    borderRadius: 30,
+    width: width * 0.85,
+    padding: 25,
+    alignItems: 'center',
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+  },
+  logoutIconCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#FFF0F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  logoutTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#141414',
+    marginBottom: 10,
+  },
+  logoutSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 30,
+    paddingHorizontal: 10,
+  },
+  logoutActions: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+  },
+  cancelLogoutBtn: {
+    flex: 1,
+    paddingVertical: 15,
+    marginRight: 10,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#EEE',
+    alignItems: 'center',
+  },
+  cancelLogoutText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#666',
+  },
+  confirmLogoutBtn: {
+    flex: 1,
+    paddingVertical: 15,
+    marginLeft: 10,
+    borderRadius: 15,
+    backgroundColor: '#E91E63',
+    alignItems: 'center',
+    elevation: 3,
+  },
+  confirmLogoutText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFF',
   },
   menuContent: {
     backgroundColor: '#FFF',

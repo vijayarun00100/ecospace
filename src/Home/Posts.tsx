@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Text, TextInput, View, Image, TouchableOpacity, Animated, Easing, ScrollView, ImageBackground, RefreshControl, Alert, ActivityIndicator, Share, Modal, KeyboardAvoidingView, Platform } from "react-native";
+import Toast from 'react-native-toast-message';
 import { SafeAreaView } from "react-native-safe-area-context";
 import PostSearchBar from "../components/PostSearchBar";
 import LinearGradient from 'react-native-linear-gradient';
@@ -155,7 +156,12 @@ function Posts({ navigation }: any) {
 
                 return { ...p, bookmarks: newBookmarks };
             }));
-            Alert.alert("Success", res.data.isBookmarked ? "Post bookmarked!" : "Bookmark removed!");
+            Toast.show({
+                type: 'success',
+                text1: 'Saved',
+                text2: res.data.isBookmarked ? 'Added to your bookmarks' : 'Removed from bookmarks',
+                position: 'bottom'
+            });
         } catch (err) {
             console.error("Bookmark error:", err);
         }

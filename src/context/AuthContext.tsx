@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../api/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import Toast from 'react-native-toast-message';
 
 interface User {
   _id: string;
@@ -83,6 +84,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(newUser);
     await AsyncStorage.setItem('token', newToken);
     await AsyncStorage.setItem('user', JSON.stringify(newUser));
+    
+    Toast.show({
+        type: 'success',
+        text1: `Welcome back, ${newUser.name}!`,
+        text2: 'Excited to have you back in EcoSpace.'
+    });
   };
 
   const logout = async () => {
